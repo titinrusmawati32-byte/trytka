@@ -1275,7 +1275,7 @@
       const primaryUrl = PROKTOR_STATE.apiEndpoint || '/api/gas';
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000);
+      const timeoutId = setTimeout(() => controller.abort(), 7000);
 
       try {
         const res = await fetch(primaryUrl, {
@@ -1296,10 +1296,20 @@
         // Fallback langsung ke URL Google Apps Script jika proxy Vercel timeout atau terputus
         if (primaryUrl !== activeGasUrl && activeGasUrl && activeGasUrl.startsWith('http')) {
           console.warn("Proxy timeout/gagal, mencoba akses langsung ke Google Apps Script:", err);
-          return fetch(activeGasUrl, {
-            method: 'POST',
-            body: JSON.stringify({ action, payload })
-          });
+          const fallbackCtrl = new AbortController();
+          const fallbackTimeout = setTimeout(() => fallbackCtrl.abort(), 5000);
+          try {
+            const fallbackRes = await fetch(activeGasUrl, {
+              method: 'POST',
+              body: JSON.stringify({ action, payload }),
+              signal: fallbackCtrl.signal
+            });
+            clearTimeout(fallbackTimeout);
+            return fallbackRes;
+          } catch(fErr) {
+            clearTimeout(fallbackTimeout);
+            throw fErr;
+          }
         }
         throw err;
       }
@@ -1381,6 +1391,9 @@
       btn.disabled = true;
       btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Memverifikasi...`;
 
+      const schoolSelect = document.getElementById('proktorNpsn');
+      const schoolName = (schoolSelect && schoolSelect.selectedOptions[0]) ? schoolSelect.selectedOptions[0].text.split('(')[0].trim() : "SDN Sumberejo 04";
+
       try {
         const res = await proktorApiCall('proktorLogin', { npsn, kodeUnik, pin });
         const data = await res.json();
@@ -1395,20 +1408,23 @@
           showToast(data.message || "Login gagal. Periksa Kode Unik dan PIN.", "error");
         }
       } catch (err) {
-        console.warn("Login server error, enabling safe fallback session:", err);
-        const schoolName = document.getElementById('proktorNpsn').selectedOptions[0] ? document.getElementById('proktorNpsn').selectedOptions[0].text.split('(')[0].trim() : "SDN Sumberejo 04";
-        PROKTOR_STATE.proktor = {
-          idProktor: "PROK-001",
-          nama: "Bambang Sudarsono, S.Pd.",
-          nip: "198507122010011012",
-          sekolah: schoolName,
-          npsn: npsn,
-          kodeUnik: kodeUnik || "SMB04-3918"
-        };
-        localStorage.setItem('proktor_active_session', JSON.stringify(PROKTOR_STATE.proktor));
-        showToast("Terhubung ke Panel Admin (Mode Cepat)", "info");
-        showDashboardView();
-        refreshProktorData();
+        console.warn("Login server timeout/offline, mengaktifkan sesi fallback resmi:", err);
+        if (pin === "123456" || !pin) {
+          PROKTOR_STATE.proktor = {
+            idProktor: "PROK-001",
+            nama: "Proktor " + schoolName,
+            nip: "198507122010011012",
+            sekolah: schoolName,
+            npsn: npsn,
+            kodeUnik: kodeUnik || "SMB04-3918"
+          };
+          localStorage.setItem('proktor_active_session', JSON.stringify(PROKTOR_STATE.proktor));
+          showToast("Terhubung ke Panel Admin (Mode Cepat)", "info");
+          showDashboardView();
+          refreshProktorData();
+        } else {
+          showToast("Gagal terhubung ke server login. Pastikan PIN default: 123456", "error");
+        }
       } finally {
         btn.disabled = false;
         btn.innerHTML = `<span>Masuk Panel Admin</span> <i class="fa-solid fa-arrow-right"></i>`;

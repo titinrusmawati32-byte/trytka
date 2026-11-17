@@ -49,8 +49,17 @@ export default async function handler(req, res) {
       }
     };
 
+    const actionName = (bodyObj && bodyObj.action) || req.query.action || '';
+    const cacheableActions = ['getDaftarSekolah', 'siswaGetExamPackages', 'proktorGetActiveExamInfo', 'getSchoolExamSettings'];
+
+    if (cacheableActions.includes(actionName)) {
+      res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+    } else {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    }
+
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20000);
+    const timeout = setTimeout(() => controller.abort(), 12000);
     fetchOptions.signal = controller.signal;
 
     if (req.method === 'POST') {

@@ -443,21 +443,32 @@
   <!-- ========================================================================= -->
   <!-- MODAL: PERBESAR GAMBAR SOAL CBT (FULLSCREEN ZOOM MODAL) -->
   <!-- ========================================================================= -->
-  <div id="modalZoomImage" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-3 sm:p-6 hidden" onclick="closeZoomImageModal()">
-    <div class="relative max-w-4xl w-full max-h-[94vh] flex flex-col items-center" onclick="event.stopPropagation()">
+  <div id="modalZoomImage" class="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-3 sm:p-6 hidden" onclick="closeZoomImageModal()">
+    <div class="relative max-w-4xl w-full max-h-[96vh] flex flex-col items-center" onclick="event.stopPropagation()">
       <div class="w-full flex justify-between items-center pb-2.5 text-white border-b border-white/20 mb-3 px-1">
         <span class="text-xs sm:text-sm font-bold tracking-wide flex items-center gap-2">
           <i class="fa-solid fa-image text-purple-400"></i>
           <span>Ilustrasi / Dokumen Soal (Resolusi Penuh)</span>
         </span>
-        <button onclick="closeZoomImageModal()" type="button" class="px-3.5 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5">
-          <i class="fa-solid fa-xmark"></i> <span>Tutup</span>
-        </button>
+        <div class="flex items-center gap-2">
+          <button onclick="zoomInImageModal()" type="button" title="Perbesar Teks" class="w-8 h-8 rounded-xl bg-white/20 hover:bg-white/30 text-white flex items-center justify-center text-xs font-bold transition active:scale-95">
+            <i class="fa-solid fa-magnifying-glass-plus"></i>
+          </button>
+          <button onclick="zoomOutImageModal()" type="button" title="Perkecil" class="w-8 h-8 rounded-xl bg-white/20 hover:bg-white/30 text-white flex items-center justify-center text-xs font-bold transition active:scale-95">
+            <i class="fa-solid fa-magnifying-glass-minus"></i>
+          </button>
+          <button onclick="resetZoomImageModal()" type="button" title="Reset Ukuran" class="px-2.5 h-8 rounded-xl bg-white/20 hover:bg-white/30 text-white flex items-center justify-center text-[11px] font-bold transition active:scale-95">
+            100%
+          </button>
+          <button onclick="closeZoomImageModal()" type="button" class="px-3.5 h-8 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 ml-1">
+            <i class="fa-solid fa-xmark"></i> <span>Tutup</span>
+          </button>
+        </div>
       </div>
-      <div class="overflow-auto max-h-[82vh] w-full rounded-2xl bg-white dark:bg-slate-900 p-2 sm:p-4 shadow-2xl flex items-center justify-center border border-white/10">
-        <img id="zoomImageModalSrc" src="" alt="Gambar Soal Diperbesar" class="max-h-[78vh] w-auto max-w-full object-contain mx-auto select-none rounded-xl">
+      <div class="overflow-auto max-h-[82vh] w-full rounded-2xl bg-slate-900/90 p-2 sm:p-4 shadow-2xl flex items-center justify-center border border-white/10" id="zoomImageWrapper">
+        <img id="zoomImageModalSrc" src="" alt="Gambar Soal Diperbesar" class="max-h-[78vh] w-auto max-w-full object-contain mx-auto select-none rounded-xl transition-transform duration-200" style="transform: scale(1);">
       </div>
-      <p class="text-[11px] text-slate-300 mt-2.5 text-center">Ketuk di luar gambar atau tombol Tutup untuk kembali ke lembar soal</p>
+      <p class="text-[11px] text-slate-300 mt-2 text-center">Gunakan tombol (+) untuk memperbesar teks kecil pada dokumen/poster. Klik Tutup untuk kembali.</p>
     </div>
   </div>
 
@@ -2015,12 +2026,29 @@
     }
 
     /**
+     * PRA-PEMUATAN GAMBAR KE MEMORI BROWSER (0ms Navigasi Antar-Soal)
+     */
+    function preloadExamImages(soalList) {
+      if (!Array.isArray(soalList)) return;
+      soalList.forEach(q => {
+        const raw = (q.gambarUrl || "").trim();
+        if (raw && (raw.startsWith('http://') || raw.startsWith('https://') || (raw.startsWith('data:image/') && raw.length > 200) || raw.startsWith('/'))) {
+          const preImg = new Image();
+          preImg.src = raw;
+        }
+      });
+    }
+
+    /**
      * MULAI SESI PENGERJAAN CBT
      */
     function startCbtExamSession() {
       CBT_STATE.isCbtActive = true;
       CBT_STATE.currentIndex = 0;
       saveSessionToLocal();
+
+      // Pra-muat seluruh gambar soal ke cache browser di latar belakang
+      preloadExamImages(CBT_STATE.soalList);
 
       // Buka SubView CBT Room dan sembunyikan katalog paket
       document.getElementById('subViewPaketUjian').classList.add('hidden');
@@ -2053,18 +2081,31 @@
       const imgContainer = document.getElementById('questionImageContainer');
       const imgEl = document.getElementById('questionImage');
       const rawImg = (q.gambarUrl || "").trim();
-      const isValidImg = rawImg && (rawImg.startsWith('data:image/') || rawImg.startsWith('http://') || rawImg.startsWith('https://') || rawImg.startsWith('/'));
+      
+      // Validasi ketat format gambar
+      const isOnline = rawImg.startsWith('http://') || rawImg.startsWith('https://') || rawImg.startsWith('/');
+      const isValidBase64 = rawImg.startsWith('data:image/') && rawImg.length > 200 && !rawImg.includes('null') && !rawImg.includes('undefined');
+      const isValidImg = isOnline || isValidBase64;
+
+      // Reset tampilan awal: selalu sembunyikan container gambar terlebih dahulu
+      imgContainer.classList.add('hidden');
+      imgEl.src = '';
 
       if (isValidImg) {
         imgEl.onerror = function() {
           imgContainer.classList.add('hidden');
+          imgEl.src = '';
         };
         imgEl.onload = function() {
-          imgContainer.classList.remove('hidden');
+          // Hanya tampilkan jika gambar benar-benar berdimensi valid
+          if (imgEl.naturalWidth > 10 && imgEl.naturalHeight > 10) {
+            imgContainer.classList.remove('hidden');
+          } else {
+            imgContainer.classList.add('hidden');
+          }
         };
         imgEl.src = rawImg;
       } else {
-        imgEl.src = '';
         imgContainer.classList.add('hidden');
       }
 
@@ -2131,15 +2172,35 @@
       }
     }
 
+    let currentZoomScale = 1;
+
     function openZoomImageModal() {
       const currentSrc = document.getElementById('questionImage').src;
       if (!currentSrc) return;
-      document.getElementById('zoomImageModalSrc').src = currentSrc;
+      currentZoomScale = 1;
+      const imgEl = document.getElementById('zoomImageModalSrc');
+      imgEl.src = currentSrc;
+      imgEl.style.transform = `scale(1)`;
       document.getElementById('modalZoomImage').classList.remove('hidden');
     }
 
     function closeZoomImageModal() {
       document.getElementById('modalZoomImage').classList.add('hidden');
+    }
+
+    function zoomInImageModal() {
+      currentZoomScale = Math.min(3.5, currentZoomScale + 0.35);
+      document.getElementById('zoomImageModalSrc').style.transform = `scale(${currentZoomScale})`;
+    }
+
+    function zoomOutImageModal() {
+      currentZoomScale = Math.max(0.6, currentZoomScale - 0.35);
+      document.getElementById('zoomImageModalSrc').style.transform = `scale(${currentZoomScale})`;
+    }
+
+    function resetZoomImageModal() {
+      currentZoomScale = 1;
+      document.getElementById('zoomImageModalSrc').style.transform = `scale(1)`;
     }
 
     function selectOption(idSoal, pilihan) {
@@ -2309,11 +2370,6 @@
       closeConfirmModal();
       if (CBT_STATE.timerInterval) clearInterval(CBT_STATE.timerInterval);
 
-      const btn = document.getElementById('btnSubmitFinal');
-      if (btn) btn.disabled = true;
-
-      showToast("Sedang mengumpulkan & mengoreksi jawaban ke server...", "info");
-
       let benar = 0;
       let salah = 0;
       let kosong = 0;
@@ -2346,30 +2402,42 @@
       CBT_STATE.isCbtActive = false;
       saveSessionToLocal();
 
+      // UI Responsif Instan (0ms Delay): Langsung alihkan ke halaman nilai & piagam
+      openTab('nilai');
+      renderNilaiTab();
+      showToast(`Alhamdulillah! Ujian selesai. Nilai kamu: ${nilaiAkhir}`, "info");
+
+      // Sinkronisasi lembar jawaban ke Google Sheets secara asinkron di latar belakang
       try {
         const activeGasUrl = typeof getGasUrl === 'function' ? getGasUrl() : (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.gasUrl : '');
-        await fetch(CBT_STATE.apiEndpoint, {
+        const submitPayload = {
+          action: 'siswaSubmitJawaban',
+          gasUrl: activeGasUrl,
+          payload: {
+            npsn: CBT_STATE.sekolah.npsn,
+            nisn: CBT_STATE.siswa.nisn,
+            idPaket: (CBT_STATE.selectedPackage ? CBT_STATE.selectedPackage.idPaket : 'PAKET-A'),
+            jawaban: CBT_STATE.jawaban,
+            nilaiAkhir: nilaiAkhir,
+            jumlahBenar: benar,
+            jumlahSalah: salah,
+            jumlahKosong: kosong
+          }
+        };
+
+        fetch(CBT_STATE.apiEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'siswaSubmitJawaban',
-            gasUrl: activeGasUrl,
-            payload: {
-              npsn: CBT_STATE.sekolah.npsn,
-              nisn: CBT_STATE.siswa.nisn,
-              idPaket: (CBT_STATE.selectedPackage ? CBT_STATE.selectedPackage.idPaket : 'PAKET-A'),
-              jawaban: CBT_STATE.jawaban,
-              nilaiAkhir: nilaiAkhir,
-              jumlahBenar: benar,
-              jumlahSalah: salah,
-              jumlahKosong: kosong
-            }
-          })
+          body: JSON.stringify(submitPayload)
+        }).then(r => r.json()).then(res => {
+          if (res && res.success) {
+            console.log("Jawaban CBT tersinkron ke Google Sheets.");
+          }
+        }).catch(err => {
+          console.warn("Koneksi latar belakang tersendat, menyimpan antrean lokal:", err);
+          localStorage.setItem('pending_cbt_submit', JSON.stringify(submitPayload));
         });
       } catch (err) {}
-
-      showToast("Jawaban berhasil dikumpulkan! Nilaimu telah terhitung.", "info");
-      openTab('nilai');
     }
 
     function renderNilaiTab() {

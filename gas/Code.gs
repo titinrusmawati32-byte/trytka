@@ -362,22 +362,38 @@ function setupDatabase() {
 }
 
 function getDaftarSekolah() {
+  const cacheKey = "MASTER_SEKOLAH_LIST";
+  try {
+    const cache = CacheService.getScriptCache();
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch(eCache) {}
+
   const ss = getSpreadsheet();
-  const masterSheet = ss.getSheetByName("Master_Sekolah");
+  let masterSheet = ss.getSheetByName("Master_Sekolah");
   if (!masterSheet) {
     setupDatabase();
+    masterSheet = ss.getSheetByName("Master_Sekolah");
   }
-  const sheet = ss.getSheetByName("Master_Sekolah");
-  const schools = sheetToObjects(sheet).map(s => ({
+  const schools = sheetToObjects(masterSheet).map(s => ({
     npsn: String(s.npsn),
     namaSekolah: s.namaSekolah,
     status: s.status
   }));
 
-  return {
+  const result = {
     success: true,
-    data: schools
+    data: schools.length > 0 ? schools : MASTER_SEKOLAH_DEFAULT
   };
+
+  try {
+    const cache = CacheService.getScriptCache();
+    cache.put(cacheKey, JSON.stringify(result), 21600); // Cache RAM 6 jam
+  } catch(eCache) {}
+
+  return result;
 }
 
 /**
@@ -390,6 +406,25 @@ function proktorLogin(payload) {
   const { npsn, kodeUnik, pin } = payload;
   if (!npsn || !kodeUnik || !pin) {
     return { success: false, message: "NPSN, Kode Unik Lembaga, dan PIN wajib diisi." };
+  }
+
+  const cleanPin = String(pin).trim();
+  const cleanKode = String(kodeUnik).trim().toUpperCase();
+
+  // Jalur Cepat (0ms Spreadsheet Overhead): Verifikasi instan dari direktori resmi Ambulu
+  const defaultSchool = MASTER_SEKOLAH_DEFAULT.find(s => String(s.npsn) === String(npsn));
+  if (defaultSchool && String(defaultSchool.kodeUnik).trim().toUpperCase() === cleanKode && cleanPin === "123456") {
+    return {
+      success: true,
+      message: "Login proktor berhasil (Akses Cepat).",
+      proktor: {
+        idProktor: "PROK-001",
+        nama: "Proktor " + defaultSchool.namaSekolah,
+        nip: "-",
+        sekolah: defaultSchool.namaSekolah,
+        npsn: String(defaultSchool.npsn)
+      }
+    };
   }
 
   const ss = getSpreadsheet();
@@ -425,7 +460,6 @@ function proktorLogin(payload) {
     proctors = sheetToObjects(proktorSheet);
   }
 
-  const cleanPin = String(pin).trim();
   let matchedProctor = proctors.find(p => String(p.pin).trim() === cleanPin);
 
   // Fallback darurat: jika PIN adalah default "123456", selalu izinkan masuk
@@ -629,7 +663,7 @@ function proktorGetTemplateQuestions(payload) {
 function sanitizeGambarUrl(rawUrl, idSoal, npsn) {
   if (!rawUrl) return "";
   const str = String(rawUrl).trim();
-  if (str === "" || str === "-" || str === "0" || str.toLowerCase() === "null" || str.toLowerCase() === "none" || str.toLowerCase() === "tidak ada") {
+  if (str === "" || str === "-" || str === "0" || str.toLowerCase() === "null" || str.toLowerCase() === "undefined" || str.toLowerCase() === "none" || str.toLowerCase() === "tidak ada") {
     return "";
   }
   // Jika sudah berupa URL online (http/https)
@@ -644,6 +678,8 @@ function sanitizeGambarUrl(rawUrl, idSoal, npsn) {
         const header = str.substring(0, commaIdx);
         const base64Data = str.substring(commaIdx + 1);
 
+        if (base64Data.length < 100) return "";
+
         let mimeType = "image/jpeg";
         const mimeMatch = header.match(/data:(image\/[a-zA-Z0-9.+-]+);/);
         if (mimeMatch) mimeType = mimeMatch[1];
@@ -653,6 +689,8 @@ function sanitizeGambarUrl(rawUrl, idSoal, npsn) {
         const fileName = `SOAL_${npsn || "TKA"}_${cleanId}.${ext}`;
 
         const bytes = Utilities.base64Decode(base64Data);
+        if (!bytes || bytes.length === 0) return "";
+
         const blob = Utilities.newBlob(bytes, mimeType, fileName);
 
         // Cari atau buat folder "SiSiswa_TKA_GambarSoal" di Google Drive
@@ -673,13 +711,13 @@ function sanitizeGambarUrl(rawUrl, idSoal, npsn) {
         return `https://lh3.googleusercontent.com/d/${fileId}`;
       }
     } catch(errDrive) {
-      Logger.log("Drive upload error, fallback to direct base64: " + errDrive);
-      // Fallback: Jika DriveApp belum diizinkan atau gagal, simpan Base64 langsung jika ukurannya muat di sel (<48000)
-      if (str.length <= 48000) return str;
+      Logger.log("Drive upload/base64 decode error: " + errDrive);
+      // Jika decoding base64 gagal (karena truncated) atau Drive error, JANGAN simpan string rusak!
+      return "";
     }
   }
   if (str.startsWith("/")) return str;
-  return str.length <= 48000 ? str : "";
+  return "";
 }
 
 function proktorSaveTemplateBatch(payload) {
@@ -793,6 +831,13 @@ function proktorSaveTemplateBatch(payload) {
     } catch(errActive) {}
   }
 
+  try {
+    const cache = CacheService.getScriptCache();
+    cache.remove("ACTIVE_EXAM_" + npsn);
+    cache.remove("EXAM_PACKAGES_" + npsn);
+    cache.remove("EXAM_SETTINGS_" + npsn);
+  } catch(e) {}
+
   return {
     success: true,
     message: `${newRows.length} butir soal hasil editan berhasil disimpan ke Folder ${kat} dalam template "${cleanName}"!`
@@ -902,6 +947,17 @@ function proktorPublishTemplatesToExam(payload) {
 
 function proktorGetActiveExamInfo(payload) {
   const { npsn } = payload;
+  if (!npsn) return { success: true, totalSoal: 0, paket: "BELUM_ADA" };
+
+  const cacheKey = "ACTIVE_EXAM_" + npsn;
+  try {
+    const cache = CacheService.getScriptCache();
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch(e) {}
+
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName("Soal_" + npsn);
   if (!sheet) return { success: true, totalSoal: 0, paket: "BELUM_ADA" };
@@ -909,11 +965,18 @@ function proktorGetActiveExamInfo(payload) {
   const list = sheetToObjects(sheet);
   const paket = list.length > 0 ? list[0].paket : "-";
 
-  return {
+  const result = {
     success: true,
     totalSoal: list.length,
     paket: paket
   };
+
+  try {
+    const cache = CacheService.getScriptCache();
+    cache.put(cacheKey, JSON.stringify(result), 3600); // 1 jam di cache RAM
+  } catch(e) {}
+
+  return result;
 }
 
 function proktorSavePesertaBatch(payload) {
@@ -1035,12 +1098,19 @@ function proktorGetRekapNilai(payload) {
  */
 
 function getSchoolExamSettings(npsn) {
+  const cacheKey = "EXAM_SETTINGS_" + npsn;
+  try {
+    const cached = CacheService.getScriptCache().get(cacheKey);
+    if (cached) return JSON.parse(cached);
+  } catch(eCache) {}
+
   const props = PropertiesService.getScriptProperties();
   const raw = props.getProperty("EXAM_SETTINGS_" + npsn);
+  let settings = null;
   if (raw) {
     try {
       const parsed = JSON.parse(raw);
-      return Object.assign({
+      settings = Object.assign({
         isExamLocked: false,
         activeToken: "TKA26",
         allowedSchools: ["ALL"],
@@ -1055,52 +1125,66 @@ function getSchoolExamSettings(npsn) {
     } catch(e) {}
   }
 
-  // Default settings awal
-  return {
-    isExamLocked: false,
-    activeToken: "TKA26",
-    allowedSchools: ["ALL"],
-    durasiMenit: 60,
-    tanggalUjian: "",
-    jamBuka: "07:30",
-    jamTutup: "12:00",
-    acakSoal: true,
-    acakOpsi: true,
-    packages: [
-      {
-        idPaket: "LIT",
-        namaPaket: "Paket 1: Literasi Membaca",
-        mapel: "Literasi Membaca",
-        jumlahSoal: 20,
-        durasiMenit: 45,
-        isLocked: false,
-        keterangan: "Bahasa Indonesia & Pemahaman Wacana"
-      },
-      {
-        idPaket: "NUM",
-        namaPaket: "Paket 2: Numerasi Berhitung",
-        mapel: "Numerasi Berhitung",
-        jumlahSoal: 20,
-        durasiMenit: 45,
-        isLocked: false,
-        keterangan: "Matematika & Pemecahan Masalah"
-      },
-      {
-        idPaket: "GABUNGAN",
-        namaPaket: "Paket 3: Try Out Lengkap TKA SD",
-        mapel: "Literasi & Numerasi",
-        jumlahSoal: 40,
-        durasiMenit: 60,
-        isLocked: false,
-        keterangan: "Simulasi Penuh Literasi + Numerasi"
-      }
-    ]
-  };
+  if (!settings) {
+    // Default settings awal
+    settings = {
+      isExamLocked: false,
+      activeToken: "TKA26",
+      allowedSchools: ["ALL"],
+      durasiMenit: 60,
+      tanggalUjian: "",
+      jamBuka: "07:30",
+      jamTutup: "12:00",
+      acakSoal: true,
+      acakOpsi: true,
+      packages: [
+        {
+          idPaket: "LIT",
+          namaPaket: "Paket 1: Literasi Membaca",
+          mapel: "Literasi Membaca",
+          jumlahSoal: 20,
+          durasiMenit: 45,
+          isLocked: false,
+          keterangan: "Bahasa Indonesia & Pemahaman Wacana"
+        },
+        {
+          idPaket: "NUM",
+          namaPaket: "Paket 2: Numerasi Berhitung",
+          mapel: "Numerasi Berhitung",
+          jumlahSoal: 20,
+          durasiMenit: 45,
+          isLocked: false,
+          keterangan: "Matematika & Pemecahan Masalah"
+        },
+        {
+          idPaket: "GABUNGAN",
+          namaPaket: "Paket 3: Try Out Lengkap TKA SD",
+          mapel: "Literasi & Numerasi",
+          jumlahSoal: 40,
+          durasiMenit: 60,
+          isLocked: false,
+          keterangan: "Simulasi Penuh Literasi + Numerasi"
+        }
+      ]
+    };
+  }
+
+  try {
+    CacheService.getScriptCache().put(cacheKey, JSON.stringify(settings), 7200); // 2 jam cache RAM
+  } catch(ePut) {}
+
+  return settings;
 }
 
 function setSchoolExamSettings(npsn, settings) {
   const props = PropertiesService.getScriptProperties();
   props.setProperty("EXAM_SETTINGS_" + npsn, JSON.stringify(settings));
+  try {
+    const cache = CacheService.getScriptCache();
+    cache.remove("EXAM_SETTINGS_" + npsn);
+    cache.remove("ACTIVE_EXAM_" + npsn);
+    cache.remove("EXAM_PACKAGES_" + npsn);
+  } catch(e) {}
 }
 
 function proktorGetExamSettings(payload) {
@@ -1138,7 +1222,7 @@ function proktorSetExamSettings(payload) {
       pkgName,
       q.mapel || "Literasi & Numerasi",
       q.pertanyaan || "",
-      q.gambarUrl || "",
+      sanitizeGambarUrl(q.gambarUrl, q.idSoal, npsn),
       q.opsiA || "",
       q.opsiB || "",
       q.opsiC || "",
@@ -1151,6 +1235,12 @@ function proktorSetExamSettings(payload) {
     if (rows.length > 0) {
       sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
     }
+
+    try {
+      const cache = CacheService.getScriptCache();
+      cache.remove("ACTIVE_EXAM_" + npsn);
+      cache.remove("EXAM_PACKAGES_" + npsn);
+    } catch(e) {}
   }
 
   return {
@@ -1163,6 +1253,12 @@ function proktorSetExamSettings(payload) {
 function siswaGetExamPackages(payload) {
   const { npsn } = payload;
   if (!npsn) return { success: false, message: "NPSN wajib diisi." };
+
+  const cacheKey = "EXAM_PACKAGES_" + npsn;
+  try {
+    const cached = CacheService.getScriptCache().get(cacheKey);
+    if (cached) return JSON.parse(cached);
+  } catch(eCache) {}
 
   const ss = getSpreadsheet();
   const settings = getSchoolExamSettings(npsn);
@@ -1212,7 +1308,7 @@ function siswaGetExamPackages(payload) {
     }));
   }
 
-  return {
+  const result = {
     success: true,
     isExamLocked: !!settings.isExamLocked,
     acakSoal: settings.acakSoal !== false,
@@ -1220,6 +1316,12 @@ function siswaGetExamPackages(payload) {
     durasiMenit: durasiMenit,
     packages: packages
   };
+
+  try {
+    CacheService.getScriptCache().put(cacheKey, JSON.stringify(result), 3600); // 1 jam cache RAM
+  } catch(ePut) {}
+
+  return result;
 }
 
 function siswaVerifyExamToken(payload) {
@@ -1290,7 +1392,7 @@ function siswaVerifyExamToken(payload) {
       idSoal: String(s.idSoal),
       mapel: s.mapel || "Literasi & Numerasi",
       pertanyaan: s.pertanyaan,
-      gambarUrl: sanitizeGambarUrl(s.gambarUrl),
+      gambarUrl: sanitizeGambarUrl(s.gambarUrl, s.idSoal, npsn),
       opsiA: s.opsiA,
       opsiB: s.opsiB,
       opsiC: s.opsiC,
@@ -1697,7 +1799,7 @@ function siswaGetPembahasan(payload) {
       idSoal: idSoal,
       mapel: s.mapel || "Literasi & Numerasi",
       pertanyaan: s.pertanyaan,
-      gambarUrl: sanitizeGambarUrl(s.gambarUrl),
+      gambarUrl: sanitizeGambarUrl(s.gambarUrl, s.idSoal, npsn),
       opsiA: s.opsiA,
       opsiB: s.opsiB,
       opsiC: s.opsiC,
