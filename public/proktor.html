@@ -22,6 +22,9 @@
   <!-- QRCode.js (Generator Cetak Kartu Peserta) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
+  <!-- Konfigurasi Mandiri Aplikasi (URL Google Apps Script) -->
+  <script src="config.js"></script>
+
   <!-- Tailwind Configuration -->
   <script>
     tailwind.config = {
@@ -581,9 +584,29 @@
     };
 
     document.addEventListener('DOMContentLoaded', () => {
+      initProktorConfig();
       loadSavedConfig();
       checkProktorSession();
     });
+
+    function initProktorConfig() {
+      if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.gasUrl && APP_CONFIG.gasUrl !== "TEMPEL_URL_GOOGLE_APPS_SCRIPT_DI_SINI") {
+        PROKTOR_STATE.apiEndpoint = typeof getEffectiveApiEndpoint === 'function' ? getEffectiveApiEndpoint() : (APP_CONFIG.useProxy ? '/api/gas' : APP_CONFIG.gasUrl);
+        console.log("Proktor API endpoint:", PROKTOR_STATE.apiEndpoint);
+      }
+    }
+
+    async function proktorApiCall(action, payload = {}) {
+      return fetch(PROKTOR_STATE.apiEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action,
+          gasUrl: (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.gasUrl : ''),
+          payload
+        })
+      });
+    }
 
     function loadSavedConfig() {
       const saved = localStorage.getItem('proktor_kop_config');
@@ -637,14 +660,7 @@
       btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Memverifikasi...`;
 
       try {
-        const res = await fetch(PROKTOR_STATE.apiEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'proktorLogin',
-            payload: { npsn, kodeUnik, pin }
-          })
-        });
+        const res = await proktorApiCall('proktorLogin', { npsn, kodeUnik, pin });
 
         const data = await res.json();
 
@@ -724,14 +740,7 @@
     async function loadBankSoal() {
       const paket = document.getElementById('filterPaketSoal').value;
       try {
-        const res = await fetch(PROKTOR_STATE.apiEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'proktorGetSoalList',
-            payload: { npsn: PROKTOR_STATE.proktor.npsn, paket }
-          })
-        });
+        const res = await proktorApiCall('proktorGetSoalList', { npsn: PROKTOR_STATE.proktor.npsn, paket });
         const data = await res.json();
         if (data.success) {
           PROKTOR_STATE.bankSoal = data.data || [];
@@ -780,14 +789,7 @@
     async function deleteSoal(idSoal) {
       if (!confirm("Hapus soal ini dari bank soal?")) return;
       try {
-        const res = await fetch(PROKTOR_STATE.apiEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'proktorDeleteSoal',
-            payload: { npsn: PROKTOR_STATE.proktor.npsn, idSoal }
-          })
-        });
+        const res = await proktorApiCall('proktorDeleteSoal', { npsn: PROKTOR_STATE.proktor.npsn, idSoal });
         const data = await res.json();
         if (data.success) {
           showToast("Soal berhasil dihapus.", "info");
@@ -867,18 +869,11 @@
       btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Menyimpan...`;
 
       try {
-        const res = await fetch(PROKTOR_STATE.apiEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'proktorSaveSoalBatch',
-            payload: {
-              npsn: PROKTOR_STATE.proktor.npsn,
-              paket: paket,
-              mapel: "Literasi & Numerasi TKA SD",
-              soalList: PROKTOR_STATE.tempParsedSoal
-            }
-          })
+        const res = await proktorApiCall('proktorSaveSoalBatch', {
+          npsn: PROKTOR_STATE.proktor.npsn,
+          paket: paket,
+          mapel: "Literasi & Numerasi TKA SD",
+          soalList: PROKTOR_STATE.tempParsedSoal
         });
         const data = await res.json();
         if (data.success) {
@@ -902,14 +897,7 @@
      */
     async function loadPesertaList() {
       try {
-        const res = await fetch(PROKTOR_STATE.apiEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'proktorGetPesertaList',
-            payload: { npsn: PROKTOR_STATE.proktor.npsn }
-          })
-        });
+        const res = await proktorApiCall('proktorGetPesertaList', { npsn: PROKTOR_STATE.proktor.npsn });
         const data = await res.json();
         if (data.success) {
           PROKTOR_STATE.pesertaList = data.data || [];
@@ -967,14 +955,7 @@
     async function resetSiswaStatus(nisn) {
       if (!confirm("Reset status siswa ini agar dapat masuk ujian kembali?")) return;
       try {
-        const res = await fetch(PROKTOR_STATE.apiEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'proktorResetSiswa',
-            payload: { npsn: PROKTOR_STATE.proktor.npsn, nisn }
-          })
-        });
+        const res = await proktorApiCall('proktorResetSiswa', { npsn: PROKTOR_STATE.proktor.npsn, nisn });
         const data = await res.json();
         if (data.success) {
           showToast(data.message, "info");
@@ -1042,16 +1023,9 @@
       btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Menyimpan...`;
 
       try {
-        const res = await fetch(PROKTOR_STATE.apiEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'proktorSavePesertaBatch',
-            payload: {
-              npsn: PROKTOR_STATE.proktor.npsn,
-              pesertaList: PROKTOR_STATE.tempParsedPeserta
-            }
-          })
+        const res = await proktorApiCall('proktorSavePesertaBatch', {
+          npsn: PROKTOR_STATE.proktor.npsn,
+          pesertaList: PROKTOR_STATE.tempParsedPeserta
         });
         const data = await res.json();
         if (data.success) {
@@ -1163,14 +1137,7 @@
      */
     async function loadRekapNilai() {
       try {
-        const res = await fetch(PROKTOR_STATE.apiEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'proktorGetRekapNilai',
-            payload: { npsn: PROKTOR_STATE.proktor.npsn }
-          })
-        });
+        const res = await proktorApiCall('proktorGetRekapNilai', { npsn: PROKTOR_STATE.proktor.npsn });
         const data = await res.json();
         if (data.success) {
           PROKTOR_STATE.rekapNilai = data.data || [];

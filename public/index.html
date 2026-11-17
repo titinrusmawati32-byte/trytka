@@ -19,6 +19,9 @@
   <!-- QR Scanner: html5-qrcode -->
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
+  <!-- Konfigurasi Mandiri Aplikasi (URL Google Apps Script) -->
+  <script src="config.js"></script>
+
   <!-- Tailwind Configuration -->
   <script>
     tailwind.config = {
@@ -623,9 +626,14 @@
     });
 
     /**
-     * Inisialisasi konfigurasi awal dari /api/config jika tersedia
+     * Inisialisasi konfigurasi awal dari config.js atau /api/config
      */
     async function initAppConfig() {
+      if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.gasUrl && APP_CONFIG.gasUrl !== "TEMPEL_URL_GOOGLE_APPS_SCRIPT_DI_SINI") {
+        CBT_STATE.apiEndpoint = typeof getEffectiveApiEndpoint === 'function' ? getEffectiveApiEndpoint() : (APP_CONFIG.useProxy ? '/api/gas' : APP_CONFIG.gasUrl);
+        console.log("Menggunakan API endpoint dari config.js:", CBT_STATE.apiEndpoint);
+        return;
+      }
       try {
         const res = await fetch('/api/config');
         if (res.ok) {
@@ -695,6 +703,7 @@
       try {
         const payload = {
           action: 'siswaLoginAndGetSoal',
+          gasUrl: (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.gasUrl : ''),
           payload: { npsn, nisn, tokenUjian: token }
         };
 
@@ -1089,6 +1098,7 @@
 
       const submitPayload = {
         action: 'siswaSubmitUjian',
+        gasUrl: (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.gasUrl : ''),
         payload: {
           npsn: CBT_STATE.npsn,
           nisn: CBT_STATE.siswa.nisn,
