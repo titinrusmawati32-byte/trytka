@@ -15,7 +15,7 @@ const APP_CONFIG = {
   versi: "1.0.0-ENTERPRISE",
 
   // PASTE URL WEB APP GOOGLE APPS SCRIPT ANDA DI SINI:
-  gasUrl: "TEMPEL_URL_GOOGLE_APPS_SCRIPT_DI_SINI",
+  gasUrl: "https://script.google.com/macros/s/AKfycbxchCziXW-pnhSOleY9l_geIgXJvWEqkwLkAOEnHuok8WP5MrV_5M1GIWIxLHbIEuQF/exec",
 
   // Pengaturan Gateway Proxy Vercel
   // Jika di-deploy di Vercel: set useProxy: true agar bebas kendala CORS
