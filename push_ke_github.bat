@@ -81,7 +81,7 @@ if %errorlevel% equ 0 (
     git rebase --abort >nul 2>&1
     git merge --abort >nul 2>&1
     git add -A
-    git commit -m "Update SiSiswa TKA SD - Login Token Lembaga + Pop-up Identitas Siswa (Nama, NISN, NIS)" >nul 2>&1
+    git commit -m "Fix GAS_URL parameter and enable automatic fallback in api/gas.js and public/config.js" >nul 2>&1
     git push -u origin main --force
     if %errorlevel% equ 0 (
         color 0A

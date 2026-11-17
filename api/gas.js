@@ -26,11 +26,13 @@ export default async function handler(req, res) {
       } catch (e) {}
     }
 
-    // Ambil URL target Google Apps Script dari config payload, query, atau Environment Variable
+    // Ambil URL target Google Apps Script dari config payload, query, Environment Variable, atau default
+    const fallbackGasUrl = "https://script.google.com/macros/s/AKfycbxchCziXW-pnhSOleY9l_geIgXJvWEqkwLkAOEnHuok8WP5MrV_5M1GIWIxLHbIEuQF/exec";
     const gasUrl =
-      (bodyObj && bodyObj.gasUrl) ||
+      (bodyObj && bodyObj.gasUrl && bodyObj.gasUrl !== 'TEMPEL_URL_GOOGLE_APPS_SCRIPT_DI_SINI' ? bodyObj.gasUrl : null) ||
       req.query.gasUrl ||
-      process.env.GAS_URL;
+      process.env.GAS_URL ||
+      fallbackGasUrl;
 
     if (!gasUrl || gasUrl === 'TEMPEL_URL_GOOGLE_APPS_SCRIPT_DI_SINI') {
       return res.status(400).json({
