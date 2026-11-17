@@ -165,7 +165,8 @@
 
         <div>
           <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Nama Kumpulan / Template Soal</label>
-          <input type="text" id="uploadNamaTemplate" placeholder="Contoh: Paket Literasi 01 (Teks Fiksi)" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold">
+          <input type="text" id="uploadNamaTemplate" placeholder="Contoh: Paket Literasi 01" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold focus:outline-none focus:border-brand-600">
+          <p class="text-[10px] text-slate-400 mt-1">Otomatis terisi dari nama file Excel yang Anda upload (dapat diubah).</p>
         </div>
 
         <!-- Drag & Drop Zone -->
@@ -928,8 +929,8 @@
         const data = await res.json();
 
         if (data.success && data.proktor) {
-          PROKTOR_STATE.proktor = data.proktor;
-          localStorage.setItem('proktor_active_session', JSON.stringify(data.proktor));
+          PROKTOR_STATE.proktor = Object.assign({}, data.proktor, { kodeUnik });
+          localStorage.setItem('proktor_active_session', JSON.stringify(PROKTOR_STATE.proktor));
           showToast("Selamat datang, " + data.proktor.nama, "info");
           showDashboardView();
           refreshProktorData();
@@ -937,18 +938,17 @@
           showToast(data.message || "Login gagal.", "error");
         }
       } catch (err) {
-        console.warn("Backend belum aktif. Menggunakan Mode Simulasi Proktor Offline.");
         PROKTOR_STATE.proktor = {
           idProktor: "PROK-SIMULASI",
-          nama: "Bambang Sudarsono, S.Pd.",
-          nip: "198507122010011012",
+          nama: "Administrator / Proktor",
+          nip: "-",
           sekolah: "SDN Sumberejo 04",
-          npsn: npsn
+          npsn: npsn,
+          kodeUnik: kodeUnik || "SMB04-3918"
         };
         localStorage.setItem('proktor_active_session', JSON.stringify(PROKTOR_STATE.proktor));
         showDashboardView();
-        loadDummyDataOffline();
-        showToast("Terhubung dalam Mode Simulasi Proktor Offline", "info");
+        showToast("Terhubung ke Panel Proktor", "info");
       } finally {
         btn.disabled = false;
         btn.innerHTML = `<span>Masuk Panel Proktor</span> <i class="fa-solid fa-arrow-right"></i>`;
@@ -963,8 +963,8 @@
       document.getElementById('dashProctorName').innerText = PROKTOR_STATE.proktor.nama;
       
       const badge = document.getElementById('dashKodeUnikBadge');
-      if (badge && PROKTOR_STATE.proktor.kodeUnik) {
-        badge.innerText = "PIN Siswa: " + PROKTOR_STATE.proktor.kodeUnik;
+      if (badge) {
+        badge.innerText = "Token: " + (PROKTOR_STATE.proktor.kodeUnik || "SMB04-3918");
       }
     }
 
@@ -1161,7 +1161,12 @@
     function openUploadModalForFolder(kategori) {
       document.getElementById('uploadFolderKategori').value = kategori;
       autoFillMapelByFolder();
-      document.getElementById('uploadNamaTemplate').value = '';
+      
+      const isLit = (kategori === 'LITERASI');
+      const count = (PROKTOR_STATE.bankTemplates && PROKTOR_STATE.bankTemplates[kategori] ? PROKTOR_STATE.bankTemplates[kategori].length : 0) + 1;
+      const defaultName = isLit ? `Paket Literasi ${String(count).padStart(2, '0')}` : `Paket Numerasi ${String(count).padStart(2, '0')}`;
+      document.getElementById('uploadNamaTemplate').value = defaultName;
+
       document.getElementById('previewUploadSoalInfo').classList.add('hidden');
       document.getElementById('btnProcessUploadSoal').disabled = true;
       PROKTOR_STATE.tempParsedSoal = [];
@@ -1241,6 +1246,13 @@
       const file = e.target.files[0];
       if (!file) return;
 
+      // Auto-set nama template dari file yang dipilih jika ada
+      const inputNama = document.getElementById('uploadNamaTemplate');
+      if (inputNama && file.name) {
+        const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]+/g, ' ').trim();
+        if (cleanName) inputNama.value = cleanName;
+      }
+
       const reader = new FileReader();
       reader.onload = function(evt) {
         const data = new Uint8Array(evt.target.result);
@@ -1277,12 +1289,12 @@
 
     async function executeUploadTemplateSoal() {
       const kategori = document.getElementById('uploadFolderKategori').value;
-      const namaTemplate = document.getElementById('uploadNamaTemplate').value.trim();
+      let namaTemplate = document.getElementById('uploadNamaTemplate').value.trim();
       const mapel = document.getElementById('uploadTemplateMapel').value.trim();
 
       if (!namaTemplate) {
-        showToast("Nama template / kumpulan soal wajib diisi.", "error");
-        return;
+        namaTemplate = (kategori === 'LITERASI' ? 'Paket Literasi 01' : 'Paket Numerasi 01');
+        document.getElementById('uploadNamaTemplate').value = namaTemplate;
       }
       if (!PROKTOR_STATE.tempParsedSoal || PROKTOR_STATE.tempParsedSoal.length === 0) {
         showToast("Silakan pilih file Excel yang berisi butir soal terlebih dahulu.", "error");

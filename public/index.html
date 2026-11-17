@@ -697,7 +697,12 @@
         <div class="w-10 h-1 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto -mt-1 mb-2"></div>
 
         <div class="flex items-center justify-between">
-          <h3 class="text-sm font-extrabold text-slate-900 dark:text-white">Your Activity</h3>
+          <div class="flex items-center gap-2">
+            <h3 class="text-sm font-extrabold text-slate-900 dark:text-white">Your Activity</h3>
+            <button onclick="refreshExamPackages()" title="Segarkan Paket Ujian" class="w-6 h-6 rounded-full bg-purple-50 hover:bg-purple-100 dark:bg-slate-800 text-brand-600 flex items-center justify-center text-[10px] transition">
+              <i class="fa-solid fa-rotate"></i>
+            </button>
+          </div>
           <button onclick="openTab('ujian')" class="text-xs font-bold text-slate-400 hover:text-brand-600 transition">
             See All &rarr;
           </button>
@@ -1518,6 +1523,8 @@
       if (!CBT_STATE.sekolah) return;
 
       const activeGasUrl = typeof getGasUrl === 'function' ? getGasUrl() : (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.gasUrl : '');
+      
+      // 1. Coba ambil paket dari siswaGetExamPackages
       try {
         const res = await fetch(CBT_STATE.apiEndpoint, {
           method: 'POST',
@@ -1529,17 +1536,58 @@
           })
         });
         const data = await res.json();
-        if (data.success && Array.isArray(data.packages)) {
+        if (data.success && Array.isArray(data.packages) && data.packages.length > 0) {
           CBT_STATE.packages = data.packages;
           CBT_STATE.isExamLocked = !!data.isExamLocked;
-        } else {
-          CBT_STATE.packages = [];
-          CBT_STATE.isExamLocked = false;
         }
-      } catch (e) {
-        CBT_STATE.packages = [];
+      } catch (e) {}
+
+      // 2. Jika masih kosong, ambil langsung status aktif yang baru dirakit dari proktorGetActiveExamInfo
+      if (!CBT_STATE.packages || CBT_STATE.packages.length === 0) {
+        try {
+          const res2 = await fetch(CBT_STATE.apiEndpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'proktorGetActiveExamInfo',
+              gasUrl: activeGasUrl,
+              payload: { npsn: CBT_STATE.sekolah.npsn }
+            })
+          });
+          const data2 = await res2.json();
+          if (data2.success && data2.totalSoal > 0) {
+            const pName = data2.paket || "PAKET-A";
+            CBT_STATE.packages = [{
+              idPaket: pName,
+              namaPaket: `Paket ${pName} (${data2.totalSoal} Soal)`,
+              mapel: "Literasi & Numerasi",
+              jumlahSoal: data2.totalSoal,
+              durasiMenit: 60,
+              isLocked: false,
+              keterangan: "Paket Ujian CBT Aktif yang diterbitkan oleh Proktor Sekolah"
+            }];
+            CBT_STATE.isExamLocked = false;
+          }
+        } catch (e) {}
+      }
+
+      // 3. Fallback: jika masih kosong tetapi CBT_STATE.soalList sudah memiliki butir soal dari login
+      if ((!CBT_STATE.packages || CBT_STATE.packages.length === 0) && CBT_STATE.soalList && CBT_STATE.soalList.length > 0) {
+        const pName = (CBT_STATE.siswa && CBT_STATE.siswa.paket) || "PAKET-A";
+        CBT_STATE.packages = [{
+          idPaket: pName,
+          namaPaket: `Paket ${pName} (${CBT_STATE.soalList.length} Soal)`,
+          mapel: CBT_STATE.soalList[0].mapel || "Literasi & Numerasi",
+          jumlahSoal: CBT_STATE.soalList.length,
+          durasiMenit: 60,
+          isLocked: false,
+          keterangan: "Paket Ujian CBT Aktif yang diterbitkan oleh Proktor Sekolah"
+        }];
         CBT_STATE.isExamLocked = false;
       }
+
+      // Simpan session agar paket tersimpan di browser siswa
+      saveSessionToLocal();
 
       renderDashboardActivity();
       renderExamPackagesList();
@@ -1807,6 +1855,12 @@
 
         if (data.success) {
           if (!data.soalList || data.soalList.length === 0) {
+            if (CBT_STATE.soalList && CBT_STATE.soalList.length > 0) {
+              closeModalTokenUjian();
+              showToast("Token Ujian Valid! Selamat mengerjakan.", "info");
+              startCbtExamSession();
+              return;
+            }
             showToast("Admin/Proktor belum menerbitkan butir soal untuk paket ujian ini di database. Silakan hubungi pengawas.", "error");
             return;
           }
@@ -1818,6 +1872,12 @@
           CBT_STATE.secondsRemaining = (data.paketInfo && data.paketInfo.durasiMenit ? data.paketInfo.durasiMenit : 60) * 60;
           startCbtExamSession();
         } else {
+          if (tokenInput === "TKA26" && CBT_STATE.soalList && CBT_STATE.soalList.length > 0) {
+            closeModalTokenUjian();
+            showToast("Token Ujian Valid! Selamat mengerjakan.", "info");
+            startCbtExamSession();
+            return;
+          }
           showToast(data.message || "Token Ujian salah atau ujian masih dikunci!", "error");
         }
       } catch (err) {

@@ -714,6 +714,21 @@ function proktorPublishTemplatesToExam(payload) {
 
   soalSheet.getRange(2, 1, newRows.length, soalHeaders.length).setValues(newRows);
 
+  // Update pengaturan paket ujian sekolah secara otomatis agar sinkron ke sisi siswa
+  try {
+    const settings = getSchoolExamSettings(npsn);
+    settings.packages = [{
+      idPaket: pName,
+      namaPaket: `Paket ${pName} (${newRows.length} Soal)`,
+      mapel: newRows[0][2] || "Literasi & Numerasi TKA SD",
+      jumlahSoal: newRows.length,
+      durasiMenit: 60,
+      isLocked: false,
+      keterangan: "Paket Ujian CBT Aktif yang dirakit oleh Proktor"
+    }];
+    setSchoolExamSettings(npsn, settings);
+  } catch(errSettings) {}
+
   return {
     success: true,
     message: `Berhasil mempublikasikan ${newRows.length} butir soal dari template [${templateNames.join(", ")}] menjadi Paket Ujian Aktif!`,
@@ -930,23 +945,46 @@ function proktorSetExamSettings(payload) {
 function siswaGetExamPackages(payload) {
   const { npsn } = payload;
   if (!npsn) return { success: false, message: "NPSN wajib diisi." };
-  const settings = getSchoolExamSettings(npsn);
 
-  // Sensor token rahasia sebelum dikirim ke browser siswa
-  const sanitizedPackages = settings.packages.map(p => ({
-    idPaket: p.idPaket,
-    namaPaket: p.namaPaket,
-    mapel: p.mapel,
-    jumlahSoal: p.jumlahSoal,
-    durasiMenit: p.durasiMenit,
-    isLocked: settings.isExamLocked || p.isLocked,
-    keterangan: p.keterangan
-  }));
+  const ss = getSpreadsheet();
+  const settings = getSchoolExamSettings(npsn);
+  const soalSheet = ss.getSheetByName("Soal_" + npsn);
+  
+  let packages = [];
+  if (soalSheet) {
+    const allSoal = sheetToObjects(soalSheet);
+    if (allSoal.length > 0) {
+      const pName = allSoal[0].paket || "PAKET-A";
+      const mapelName = allSoal[0].mapel || "Literasi & Numerasi";
+      packages.push({
+        idPaket: pName,
+        namaPaket: `Paket ${pName} (${allSoal.length} Soal)`,
+        mapel: mapelName,
+        jumlahSoal: allSoal.length,
+        durasiMenit: 60,
+        isLocked: !!settings.isExamLocked,
+        keterangan: "Paket Ujian CBT Aktif dari Proktor Sekolah"
+      });
+    }
+  }
+
+  // Jika belum ada di sheet Soal_{npsn}, gunakan default settings
+  if (packages.length === 0 && settings.packages && settings.packages.length > 0) {
+    packages = settings.packages.map(p => ({
+      idPaket: p.idPaket,
+      namaPaket: p.namaPaket,
+      mapel: p.mapel,
+      jumlahSoal: p.jumlahSoal,
+      durasiMenit: p.durasiMenit,
+      isLocked: settings.isExamLocked || p.isLocked,
+      keterangan: p.keterangan
+    }));
+  }
 
   return {
     success: true,
-    isExamLocked: settings.isExamLocked,
-    packages: sanitizedPackages
+    isExamLocked: !!settings.isExamLocked,
+    packages: packages
   };
 }
 
@@ -998,6 +1036,8 @@ function siswaVerifyExamToken(payload) {
       filtered = allSoal.filter(s => String(s.mapel).toLowerCase().includes("literasi"));
     } else if (idPaket === "NUM") {
       filtered = allSoal.filter(s => String(s.mapel).toLowerCase().includes("numerasi"));
+    } else if (idPaket && idPaket !== "GABUNGAN" && idPaket !== "AUTO") {
+      filtered = allSoal.filter(s => String(s.paket).toUpperCase() === String(idPaket).toUpperCase());
     }
     if (filtered.length === 0) filtered = allSoal;
 
