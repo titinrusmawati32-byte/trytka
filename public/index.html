@@ -629,9 +629,10 @@
      * Inisialisasi konfigurasi awal dari config.js atau /api/config
      */
     async function initAppConfig() {
-      if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.gasUrl && APP_CONFIG.gasUrl !== "TEMPEL_URL_GOOGLE_APPS_SCRIPT_DI_SINI") {
-        CBT_STATE.apiEndpoint = typeof getEffectiveApiEndpoint === 'function' ? getEffectiveApiEndpoint() : (APP_CONFIG.useProxy ? '/api/gas' : APP_CONFIG.gasUrl);
-        console.log("Menggunakan API endpoint dari config.js:", CBT_STATE.apiEndpoint);
+      const activeUrl = typeof getGasUrl === 'function' ? getGasUrl() : (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.gasUrl : '');
+      if (activeUrl && activeUrl !== "TEMPEL_URL_GOOGLE_APPS_SCRIPT_DI_SINI") {
+        CBT_STATE.apiEndpoint = typeof getEffectiveApiEndpoint === 'function' ? getEffectiveApiEndpoint() : (APP_CONFIG.useProxy ? '/api/gas' : activeUrl);
+        console.log("Menggunakan API endpoint:", CBT_STATE.apiEndpoint);
         return;
       }
       try {
@@ -701,9 +702,10 @@
       btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> <span>Memverifikasi...</span>`;
 
       try {
+        const activeGasUrl = typeof getGasUrl === 'function' ? getGasUrl() : (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.gasUrl : '');
         const payload = {
           action: 'siswaLoginAndGetSoal',
-          gasUrl: (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.gasUrl : ''),
+          gasUrl: activeGasUrl,
           payload: { npsn, nisn, tokenUjian: token }
         };
 
@@ -1096,9 +1098,10 @@
         pilihan: CBT_STATE.jawaban[idSoal]
       }));
 
+      const activeGasUrl = typeof getGasUrl === 'function' ? getGasUrl() : (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.gasUrl : '');
       const submitPayload = {
         action: 'siswaSubmitUjian',
-        gasUrl: (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.gasUrl : ''),
+        gasUrl: activeGasUrl,
         payload: {
           npsn: CBT_STATE.npsn,
           nisn: CBT_STATE.siswa.nisn,

@@ -24,10 +24,20 @@ const APP_CONFIG = {
   proxyUrl: "/api/gas"
 };
 
+// Mengambil URL GAS dari config atau dari localStorage (jika disetel langsung di web)
+function getGasUrl() {
+  const localUrl = localStorage.getItem('custom_gas_url');
+  if (localUrl && localUrl.trim() !== '' && localUrl.startsWith('http')) {
+    return localUrl.trim();
+  }
+  return APP_CONFIG.gasUrl;
+}
+
 // Jangan ubah fungsi pembantu ini
 function getEffectiveApiEndpoint() {
+  const activeGasUrl = getGasUrl();
   if (APP_CONFIG.useProxy && window.location.protocol.startsWith('http') && !window.location.hostname.includes('script.google.com')) {
     return APP_CONFIG.proxyUrl;
   }
-  return APP_CONFIG.gasUrl;
+  return activeGasUrl;
 }

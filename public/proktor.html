@@ -106,50 +106,169 @@
   <div id="toastContainer" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-11/12 max-w-md"></div>
 
   <!-- ========================================================================= -->
-  <!-- MODAL: UPLOAD EXCEL SOAL -->
+  <!-- MODAL: SETEL URL GOOGLE APPS SCRIPT -->
+  <!-- ========================================================================= -->
+  <div id="modalGasConfig" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-800">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+          <i class="fa-solid fa-database text-brand-600"></i> Setel URL Database (GAS)
+        </h3>
+        <button onclick="closeGasConfigModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-500 mb-4 leading-relaxed">
+        Tempelkan (paste) URL Web App Google Apps Script dari spreadsheet Anda (yang berakhiran <strong>/exec</strong>):
+      </p>
+      <input type="url" id="inputCustomGasUrl" placeholder="https://script.google.com/macros/s/.../exec"
+             class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-mono mb-4 focus:outline-none focus:ring-2 focus:ring-brand-600">
+      <div class="grid grid-cols-2 gap-3">
+        <button onclick="closeGasConfigModal()" type="button" class="py-3 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold rounded-xl text-xs transition">
+          Batal
+        </button>
+        <button onclick="saveCustomGasUrl()" type="button" class="py-3 px-4 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-xs shadow-lg shadow-brand-600/30 transition">
+          Simpan URL
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: UPLOAD TEMPLATE SOAL KE FOLDER -->
   <!-- ========================================================================= -->
   <div id="modalUploadSoal" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
     <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800">
       <div class="flex justify-between items-center mb-4">
         <h3 class="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
-          <i class="fa-solid fa-file-excel text-emerald-600"></i> Import Soal dari Excel
+          <i class="fa-solid fa-folder-plus text-brand-600"></i> Simpan Template ke Folder
         </h3>
         <button onclick="closeUploadSoalModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 flex items-center justify-center">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
-      <div class="space-y-4">
+      <div class="space-y-3.5">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Target Folder</label>
+            <select id="uploadFolderKategori" onchange="autoFillMapelByFolder()" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-brand-600">
+              <option value="LITERASI">📘 Folder Literasi</option>
+              <option value="NUMERASI">📗 Folder Numerasi</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Mata Pelajaran</label>
+            <input type="text" id="uploadTemplateMapel" value="Bahasa Indonesia" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold">
+          </div>
+        </div>
+
         <div>
-          <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Target Paket Ujian</label>
-          <select id="uploadTargetPaket" class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold">
-            <option value="PAKET-A">PAKET-A (Literasi & Numerasi)</option>
-            <option value="PAKET-B">PAKET-B</option>
-            <option value="PAKET-C">PAKET-C</option>
-          </select>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Nama Kumpulan / Template Soal</label>
+          <input type="text" id="uploadNamaTemplate" placeholder="Contoh: Paket Literasi 01 (Teks Fiksi)" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold">
         </div>
 
         <!-- Drag & Drop Zone -->
         <div id="dropZoneSoal" onclick="document.getElementById('fileInputSoal').click()"
-             class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-brand-600 dark:hover:border-brand-500 rounded-2xl p-6 text-center cursor-pointer transition bg-slate-50/50 dark:bg-slate-800/40">
-          <i class="fa-solid fa-cloud-arrow-up text-4xl text-slate-400 mb-2"></i>
-          <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">Klik atau geser file spreadsheet (.xlsx / .xls)</p>
-          <p class="text-xs text-slate-400 mt-1">Gunakan template resmi untuk hasil pembacaan optimal.</p>
+             class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-brand-600 dark:hover:border-brand-500 rounded-2xl p-5 text-center cursor-pointer transition bg-slate-50/50 dark:bg-slate-800/40">
+          <i class="fa-solid fa-file-excel text-3xl text-emerald-600 mb-1.5"></i>
+          <p class="text-xs font-semibold text-slate-700 dark:text-slate-200">Klik / geser file Excel (.xlsx / .xls)</p>
+          <p class="text-[11px] text-slate-400 mt-0.5">Sistem akan membaca soal dan kunci jawaban otomatis.</p>
           <input type="file" id="fileInputSoal" accept=".xlsx, .xls" class="hidden" onchange="handleFileSoalSelected(event)">
         </div>
 
-        <div id="previewUploadSoalInfo" class="hidden text-xs bg-brand-50 dark:bg-brand-950/40 p-3 rounded-xl border border-brand-200 dark:border-brand-800 text-brand-800 dark:text-brand-300">
+        <div id="previewUploadSoalInfo" class="hidden text-xs bg-emerald-50 dark:bg-emerald-950/40 p-3 rounded-xl border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-semibold">
           <!-- Live Preview Info -->
         </div>
 
-        <div class="grid grid-cols-2 gap-3 pt-2">
-          <button onclick="downloadTemplateSoal()" type="button" class="py-3 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5">
-            <i class="fa-solid fa-download"></i> Unduh Template
+        <div class="grid grid-cols-2 gap-3 pt-1">
+          <button onclick="downloadTemplateSoal()" type="button" class="py-2.5 px-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-download"></i> Format Excel
           </button>
-          <button onclick="executeUploadSoal()" id="btnProcessUploadSoal" disabled type="button" class="py-3 px-4 bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white font-bold rounded-xl text-xs shadow-lg shadow-brand-600/30 flex items-center justify-center gap-1.5">
-            <i class="fa-solid fa-upload"></i> Simpan ke Server
+          <button onclick="executeUploadTemplateSoal()" id="btnProcessUploadSoal" disabled type="button" class="py-2.5 px-3 bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white font-bold rounded-xl text-xs shadow-lg shadow-brand-600/30 flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-cloud-arrow-up"></i> Simpan ke Folder
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: RAKIT PAKET UJIAN GABUNGAN (LITERASI + NUMERASI) -->
+  <!-- ========================================================================= -->
+  <div id="modalRakitPaket" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
+          <i class="fa-solid fa-bolt text-amber-500"></i> Rakit Paket Ujian Aktif
+        </h3>
+        <button onclick="closeRakitPaketModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-500 mb-4 leading-relaxed">
+        Pilih kumpulan soal dari folder Literasi dan Numerasi yang sudah tersusun rapi untuk digabungkan menjadi 1 paket ujian utuh:
+      </p>
+
+      <div class="space-y-4">
+        <!-- Pilihan Literasi -->
+        <div class="p-3.5 bg-blue-50/60 dark:bg-blue-950/30 rounded-2xl border border-blue-200 dark:border-blue-900">
+          <label class="block text-xs font-extrabold text-blue-800 dark:text-blue-300 uppercase mb-1.5 flex items-center gap-1.5">
+            <i class="fa-solid fa-book-open"></i> 1. Template dari Folder Literasi:
+          </label>
+          <select id="selectRakitLiterasi" onchange="calculateRakitSummary()" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-blue-300 dark:border-blue-800 rounded-xl text-xs font-semibold">
+            <option value="">-- Lewati / Tanpa Literasi --</option>
+          </select>
+        </div>
+
+        <!-- Pilihan Numerasi -->
+        <div class="p-3.5 bg-emerald-50/60 dark:bg-emerald-950/30 rounded-2xl border border-emerald-200 dark:border-emerald-900">
+          <label class="block text-xs font-extrabold text-emerald-800 dark:text-emerald-300 uppercase mb-1.5 flex items-center gap-1.5">
+            <i class="fa-solid fa-calculator"></i> 2. Template dari Folder Numerasi:
+          </label>
+          <select id="selectRakitNumerasi" onchange="calculateRakitSummary()" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-800 rounded-xl text-xs font-semibold">
+            <option value="">-- Lewati / Tanpa Numerasi --</option>
+          </select>
+        </div>
+
+        <!-- Ringkasan Soal Terpilih -->
+        <div class="bg-slate-50 dark:bg-slate-800 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+          <div>
+            <div class="text-[11px] text-slate-500">Estimasi Total Soal Ujian:</div>
+            <div id="rakitTotalSoalCount" class="text-xl font-extrabold text-brand-600 font-mono">0 Butir Soal</div>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-0.5">Label Paket</label>
+            <input type="text" id="rakitTargetPaket" value="PAKET-A" class="px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-mono font-bold w-24 text-center">
+          </div>
+        </div>
+
+        <button onclick="executePublishRakitPaket()" id="btnPublishRakit" class="w-full py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-2xl text-xs shadow-lg shadow-brand-600/30 transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-rocket"></i>
+          <span>Publikasikan Sebagai Ujian Aktif Sekarang</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: PREVIEW BUTIR SOAL TEMPLATE -->
+  <!-- ========================================================================= -->
+  <div id="modalViewQuestions" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 max-w-3xl w-full shadow-2xl border border-slate-200 dark:border-slate-800 max-h-[85vh] flex flex-col">
+      <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div>
+          <h3 id="viewTemplateModalTitle" class="font-bold text-base text-slate-900 dark:text-white">Kumpulan Soal</h3>
+          <p id="viewTemplateModalSubtitle" class="text-xs text-slate-500">Folder Literasi • 15 Butir Soal</p>
+        </div>
+        <button onclick="closeViewQuestionsModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="overflow-y-auto flex-1 pr-1 space-y-3" id="viewQuestionsListContainer">
+        <!-- Injected by JavaScript -->
       </div>
     </div>
   </div>
@@ -260,7 +379,11 @@
 
       </form>
 
-      <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 text-center">
+      <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 text-center space-y-2.5">
+        <button type="button" onclick="openGasConfigModal()" class="text-xs font-semibold text-brand-600 hover:text-brand-700 transition flex items-center justify-center gap-1.5 mx-auto">
+          <i class="fa-solid fa-database"></i>
+          <span>Setel / Ubah URL Database Google Apps Script</span>
+        </button>
         <a href="index.html" class="text-xs font-semibold text-slate-500 hover:text-brand-600 transition flex items-center justify-center gap-1.5">
           <i class="fa-solid fa-arrow-left"></i>
           <span>Kembali ke Halaman Siswa CBT</span>
@@ -329,49 +452,155 @@
     <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 pb-24 space-y-6">
 
       <!-- ===================================================================== -->
-      <!-- TAB 1: BANK SOAL -->
+      <!-- TAB 1: BANK SOAL (SISTEM 2 FOLDER: LITERASI & NUMERASI) -->
       <!-- ===================================================================== -->
-      <div id="tabBankSoal" class="tab-content space-y-4">
+      <div id="tabBankSoal" class="tab-content space-y-5">
         
-        <!-- Header Aksi 2x2 Responsive Grid -->
-        <div class="grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-between gap-2.5">
-          <div class="flex items-center gap-2 col-span-2 sm:col-span-1">
-            <span class="text-xs font-bold text-slate-500">Pilih Paket:</span>
-            <select id="filterPaketSoal" onchange="loadBankSoal()" class="px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold">
-              <option value="PAKET-A">PAKET-A (Aktif)</option>
-              <option value="PAKET-B">PAKET-B</option>
-              <option value="PAKET-C">PAKET-C</option>
-            </select>
+        <!-- Hero Widget: Status Paket Ujian Aktif Saat Ini -->
+        <div class="bg-gradient-to-r from-slate-900 to-indigo-950 dark:from-slate-900 dark:to-slate-800 rounded-3xl p-5 text-white shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4 border border-slate-700/50">
+          <div class="flex items-center gap-3.5">
+            <div class="w-12 h-12 rounded-2xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center text-2xl">
+              <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <div>
+              <div class="text-[11px] uppercase tracking-wider font-bold text-indigo-300">Status Paket Ujian CBT Aktif</div>
+              <div class="flex items-center gap-2 mt-0.5">
+                <span id="activeExamSummaryTitle" class="text-base sm:text-lg font-extrabold font-sans">Sedang Memuat...</span>
+                <span id="activeExamBadgePill" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-white">Aktif</span>
+              </div>
+              <div id="activeExamQuestionCount" class="text-xs text-slate-400 font-mono mt-0.5">0 Butir Soal Terpasang</div>
+            </div>
           </div>
 
-          <div class="grid grid-cols-2 sm:flex gap-2 col-span-2 sm:col-span-1">
-            <button onclick="downloadTemplateSoal()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition">
-              <i class="fa-solid fa-download text-emerald-600"></i> Unduh Template
-            </button>
-            <button onclick="openUploadSoalModal()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 transition">
-              <i class="fa-solid fa-file-excel"></i> Upload Excel
+          <div class="flex gap-2 w-full sm:w-auto">
+            <button onclick="openRakitPaketModal()" class="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold rounded-xl text-xs shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-bolt"></i>
+              <span>Rakit Paket Ujian (Literasi + Numerasi)</span>
             </button>
           </div>
         </div>
 
-        <!-- Tabel Bank Soal -->
-        <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200/80 dark:border-slate-800 overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs">
-              <thead class="bg-slate-50 dark:bg-slate-800/60 uppercase font-extrabold text-slate-500 border-b border-slate-200 dark:border-slate-800">
-                <tr>
-                  <th class="py-3.5 px-4 w-12 text-center">No</th>
-                  <th class="py-3.5 px-4 w-28">ID / Paket</th>
-                  <th class="py-3.5 px-4">Pertanyaan & Opsi Jawaban</th>
-                  <th class="py-3.5 px-4 w-20 text-center">Kunci</th>
-                  <th class="py-3.5 px-4 w-16 text-center">Bobot</th>
-                  <th class="py-3.5 px-4 w-16 text-center">Aksi</th>
-                </tr>
-              </thead>
-              <tbody id="tbodyBankSoal" class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
-                <!-- Injected by JavaScript -->
-              </tbody>
-            </table>
+        <!-- =================================================================== -->
+        <!-- VIEW 1: DUA FOLDER UTAMA (LITERASI & NUMERASI) -->
+        <!-- =================================================================== -->
+        <div id="folderMainView" class="space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-base font-extrabold text-slate-900 dark:text-white">Bank Soal Terstruktur</h2>
+              <p class="text-xs text-slate-500">Pilih salah satu folder utama untuk mengelola kumpulan template soal:</p>
+            </div>
+            <button onclick="downloadTemplateSoal()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-download text-emerald-600"></i>
+              <span>Unduh Format Excel</span>
+            </button>
+          </div>
+
+          <!-- Grid 2 Folder Utama -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            
+            <!-- 📘 FOLDER 1: LITERASI -->
+            <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 border-2 border-blue-200/80 dark:border-blue-900 shadow-sm hover:shadow-md transition flex flex-col justify-between group">
+              <div>
+                <div class="flex justify-between items-start mb-4">
+                  <div class="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center text-2xl group-hover:scale-105 transition">
+                    <i class="fa-solid fa-book-open-reader"></i>
+                  </div>
+                  <span class="px-3 py-1 bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-extrabold text-xs rounded-full">
+                    Folder 1
+                  </span>
+                </div>
+                <h3 class="text-lg font-extrabold text-slate-900 dark:text-white">Folder Literasi</h3>
+                <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                  Kumpulan template soal Bahasa Indonesia, pemahaman teks fiksi, narasi, dan teks informasi/berita.
+                </p>
+                <div class="flex items-center gap-3 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 text-xs">
+                  <div>
+                    <span class="text-slate-400">Koleksi Template:</span>
+                    <strong id="folderCountLitTemplates" class="font-mono text-blue-600 ml-1">0</strong>
+                  </div>
+                  <div>
+                    <span class="text-slate-400">Total Soal:</span>
+                    <strong id="folderCountLitSoal" class="font-mono text-slate-700 dark:text-slate-200 ml-1">0 Butir</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 mt-6">
+                <button onclick="openFolderDetail('LITERASI')" class="py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-md shadow-blue-600/20 transition flex items-center justify-center gap-1.5">
+                  <i class="fa-solid fa-folder-open"></i> Buka Folder
+                </button>
+                <button onclick="openUploadModalForFolder('LITERASI')" class="py-2.5 px-3 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+                  <i class="fa-solid fa-plus"></i> Tambah Template
+                </button>
+              </div>
+            </div>
+
+            <!-- 📗 FOLDER 2: NUMERASI -->
+            <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 border-2 border-emerald-200/80 dark:border-emerald-900 shadow-sm hover:shadow-md transition flex flex-col justify-between group">
+              <div>
+                <div class="flex justify-between items-start mb-4">
+                  <div class="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center text-2xl group-hover:scale-105 transition">
+                    <i class="fa-solid fa-calculator"></i>
+                  </div>
+                  <span class="px-3 py-1 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-extrabold text-xs rounded-full">
+                    Folder 2
+                  </span>
+                </div>
+                <h3 class="text-lg font-extrabold text-slate-900 dark:text-white">Folder Numerasi</h3>
+                <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                  Kumpulan template soal Matematika, aritmatika campuran, pecahan, geometri bidang, dan penalaran data.
+                </p>
+                <div class="flex items-center gap-3 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 text-xs">
+                  <div>
+                    <span class="text-slate-400">Koleksi Template:</span>
+                    <strong id="folderCountNumTemplates" class="font-mono text-emerald-600 ml-1">0</strong>
+                  </div>
+                  <div>
+                    <span class="text-slate-400">Total Soal:</span>
+                    <strong id="folderCountNumSoal" class="font-mono text-slate-700 dark:text-slate-200 ml-1">0 Butir</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 mt-6">
+                <button onclick="openFolderDetail('NUMERASI')" class="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-1.5">
+                  <i class="fa-solid fa-folder-open"></i> Buka Folder
+                </button>
+                <button onclick="openUploadModalForFolder('NUMERASI')" class="py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+                  <i class="fa-solid fa-plus"></i> Tambah Template
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- VIEW 2: DI DALAM FOLDER TERPILIH (LITERASI ATAU NUMERASI) -->
+        <!-- =================================================================== -->
+        <div id="folderDetailView" class="space-y-4 hidden">
+          <!-- Breadcrumb & Navigasi Atas -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+            <div class="flex items-center gap-2">
+              <button onclick="backToFolderMainView()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-arrow-left"></i> Semua Folder
+              </button>
+              <span class="text-slate-300 dark:text-slate-700">/</span>
+              <span id="breadcrumbFolderName" class="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+                <!-- Dynamically filled -->
+              </span>
+            </div>
+
+            <div class="flex gap-2">
+              <button onclick="openUploadModalForCurrentFolder()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-xl shadow-md shadow-brand-600/20 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-plus"></i> Upload Template Baru ke Folder Ini
+              </button>
+            </div>
+          </div>
+
+          <!-- Grid Daftar Template Soal di dalam Folder -->
+          <div id="folderTemplatesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Dynamically populated by JavaScript -->
           </div>
         </div>
 
@@ -590,22 +819,48 @@
     });
 
     function initProktorConfig() {
-      if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.gasUrl && APP_CONFIG.gasUrl !== "TEMPEL_URL_GOOGLE_APPS_SCRIPT_DI_SINI") {
-        PROKTOR_STATE.apiEndpoint = typeof getEffectiveApiEndpoint === 'function' ? getEffectiveApiEndpoint() : (APP_CONFIG.useProxy ? '/api/gas' : APP_CONFIG.gasUrl);
-        console.log("Proktor API endpoint:", PROKTOR_STATE.apiEndpoint);
+      const activeUrl = typeof getGasUrl === 'function' ? getGasUrl() : (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.gasUrl : '');
+      if (activeUrl && activeUrl !== "TEMPEL_URL_GOOGLE_APPS_SCRIPT_DI_SINI") {
+        PROKTOR_STATE.apiEndpoint = typeof getEffectiveApiEndpoint === 'function' ? getEffectiveApiEndpoint() : (APP_CONFIG.useProxy ? '/api/gas' : activeUrl);
       }
     }
 
     async function proktorApiCall(action, payload = {}) {
+      const activeGasUrl = typeof getGasUrl === 'function' ? getGasUrl() : (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.gasUrl : '');
       return fetch(PROKTOR_STATE.apiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action,
-          gasUrl: (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.gasUrl : ''),
+          gasUrl: activeGasUrl,
           payload
         })
       });
+    }
+
+    function openGasConfigModal() {
+      const current = localStorage.getItem('custom_gas_url') || (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.gasUrl !== 'TEMPEL_URL_GOOGLE_APPS_SCRIPT_DI_SINI' ? APP_CONFIG.gasUrl : '');
+      document.getElementById('inputCustomGasUrl').value = current;
+      document.getElementById('modalGasConfig').classList.remove('hidden');
+    }
+
+    function closeGasConfigModal() {
+      document.getElementById('modalGasConfig').classList.add('hidden');
+    }
+
+    function saveCustomGasUrl() {
+      const val = document.getElementById('inputCustomGasUrl').value.trim();
+      if (!val || !val.startsWith('http')) {
+        showToast("Masukkan URL yang valid (diawali https://)", "error");
+        return;
+      }
+      localStorage.setItem('custom_gas_url', val);
+      if (typeof APP_CONFIG !== 'undefined') {
+        APP_CONFIG.gasUrl = val;
+      }
+      initProktorConfig();
+      closeGasConfigModal();
+      showToast("URL Google Apps Script berhasil disimpan!", "info");
     }
 
     function loadSavedConfig() {
@@ -725,7 +980,7 @@
       if (icon) icon.classList.add('fa-spin');
 
       await Promise.all([
-        loadBankSoal(),
+        loadBankTemplates(),
         loadPesertaList(),
         loadRekapNilai()
       ]);
@@ -735,81 +990,182 @@
     }
 
     /**
-     * BANK SOAL LOGIC
+     * =========================================================================
+     * SISTEM 2 FOLDER BANK SOAL: LITERASI & NUMERASI
+     * =========================================================================
      */
-    async function loadBankSoal() {
-      const paket = document.getElementById('filterPaketSoal').value;
+    async function loadBankTemplates() {
+      await loadActiveExamInfo();
+
       try {
-        const res = await proktorApiCall('proktorGetSoalList', { npsn: PROKTOR_STATE.proktor.npsn, paket });
+        const res = await proktorApiCall('proktorGetBankTemplates', { npsn: PROKTOR_STATE.proktor.npsn });
         const data = await res.json();
-        if (data.success) {
-          PROKTOR_STATE.bankSoal = data.data || [];
-          renderBankSoalTable();
+        if (data.success && data.data) {
+          PROKTOR_STATE.bankTemplates = data.data;
+          renderFolderMainView();
+          if (PROKTOR_STATE.currentOpenFolder) {
+            renderFolderTemplatesGrid();
+          }
         }
       } catch(e) {
         loadDummyDataOffline();
       }
     }
 
-    function renderBankSoalTable() {
-      const tbody = document.getElementById('tbodyBankSoal');
-      tbody.innerHTML = '';
+    async function loadActiveExamInfo() {
+      try {
+        const res = await proktorApiCall('proktorGetActiveExamInfo', { npsn: PROKTOR_STATE.proktor.npsn });
+        const data = await res.json();
+        if (data.success) {
+          const total = data.totalSoal || 0;
+          const paket = data.paket || "PAKET-A";
+          document.getElementById('activeExamSummaryTitle').innerText = total > 0 ? `Paket ${paket} (${total} Soal)` : "Belum Ada Soal Dipublikasikan";
+          document.getElementById('activeExamQuestionCount').innerText = total > 0 ? `${total} Butir Soal Siap Dikerjakan Siswa` : "Rakit paket dari folder untuk mengaktifkan ujian";
+          const pill = document.getElementById('activeExamBadgePill');
+          if (total > 0) {
+            pill.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-white";
+            pill.innerText = "Aktif";
+          } else {
+            pill.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-white";
+            pill.innerText = "Kosong";
+          }
+        }
+      } catch(e) {
+        document.getElementById('activeExamSummaryTitle').innerText = "Paket PAKET-A (3 Soal)";
+        document.getElementById('activeExamQuestionCount').innerText = "3 Butir Soal Terpasang (Mode Simulasi)";
+      }
+    }
 
-      if (PROKTOR_STATE.bankSoal.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400">Belum ada soal pada paket ini. Silakan import dari Excel.</td></tr>`;
+    function renderFolderMainView() {
+      const litList = (PROKTOR_STATE.bankTemplates && PROKTOR_STATE.bankTemplates.LITERASI) || [];
+      const numList = (PROKTOR_STATE.bankTemplates && PROKTOR_STATE.bankTemplates.NUMERASI) || [];
+
+      const litTotalSoal = litList.reduce((acc, cur) => acc + (cur.totalSoal || 0), 0);
+      const numTotalSoal = numList.reduce((acc, cur) => acc + (cur.totalSoal || 0), 0);
+
+      document.getElementById('folderCountLitTemplates').innerText = litList.length;
+      document.getElementById('folderCountLitSoal').innerText = `${litTotalSoal} Butir`;
+
+      document.getElementById('folderCountNumTemplates').innerText = numList.length;
+      document.getElementById('folderCountNumSoal').innerText = `${numTotalSoal} Butir`;
+    }
+
+    function openFolderDetail(kategori) {
+      PROKTOR_STATE.currentOpenFolder = kategori;
+      document.getElementById('folderMainView').classList.add('hidden');
+      document.getElementById('folderDetailView').classList.remove('hidden');
+
+      const isLit = (kategori === 'LITERASI');
+      const icon = isLit ? 'fa-book-open-reader text-blue-600' : 'fa-calculator text-emerald-600';
+      const label = isLit ? 'Folder Literasi (Bahasa Indonesia)' : 'Folder Numerasi (Matematika)';
+
+      document.getElementById('breadcrumbFolderName').innerHTML = `<i class="fa-solid ${icon}"></i> <span>${label}</span>`;
+
+      renderFolderTemplatesGrid();
+      window.scrollTo({ top: 100, behavior: 'smooth' });
+    }
+
+    function backToFolderMainView() {
+      PROKTOR_STATE.currentOpenFolder = null;
+      document.getElementById('folderDetailView').classList.add('hidden');
+      document.getElementById('folderMainView').classList.remove('hidden');
+      renderFolderMainView();
+    }
+
+    function renderFolderTemplatesGrid() {
+      const grid = document.getElementById('folderTemplatesGrid');
+      grid.innerHTML = '';
+
+      const kat = PROKTOR_STATE.currentOpenFolder;
+      if (!kat) return;
+
+      const templates = (PROKTOR_STATE.bankTemplates && PROKTOR_STATE.bankTemplates[kat]) || [];
+
+      if (templates.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full bg-white dark:bg-slate-900 rounded-3xl p-12 text-center border-2 border-dashed border-slate-200 dark:border-slate-800">
+            <i class="fa-regular fa-folder-open text-5xl text-slate-300 dark:text-slate-700 mb-3"></i>
+            <h4 class="font-extrabold text-base text-slate-700 dark:text-slate-300">Folder Masih Kosong</h4>
+            <p class="text-xs text-slate-400 mt-1 mb-4">Belum ada template soal di dalam Folder ${kat}. Silakan upload dari file Excel.</p>
+            <button onclick="openUploadModalForCurrentFolder()" class="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-xl shadow-md transition">
+              <i class="fa-solid fa-plus mr-1"></i> Upload Template Pertama
+            </button>
+          </div>
+        `;
         return;
       }
 
-      PROKTOR_STATE.bankSoal.forEach((s, idx) => {
-        const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition";
-        tr.innerHTML = `
-          <td class="py-3 px-4 text-center font-bold font-mono">${idx + 1}</td>
-          <td class="py-3 px-4 font-mono font-semibold text-[11px] text-slate-500">${s.idSoal}<br><span class="text-brand-600 font-bold">${s.paket}</span></td>
-          <td class="py-3 px-4">
-            <div class="font-medium text-slate-900 dark:text-white line-clamp-2">${s.pertanyaan}</div>
-            <div class="text-[11px] text-slate-400 mt-1 flex flex-wrap gap-2">
-              <span><strong>A:</strong> ${s.opsiA}</span> | <span><strong>B:</strong> ${s.opsiB}</span> | <span><strong>C:</strong> ${s.opsiC}</span> | <span><strong>D:</strong> ${s.opsiD}</span>
+      const isLit = (kat === 'LITERASI');
+      const badgeBg = isLit ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300';
+      const icon = isLit ? 'fa-book-open text-blue-600' : 'fa-calculator text-emerald-600';
+
+      templates.forEach((t) => {
+        const card = document.createElement('div');
+        card.className = "bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition flex flex-col justify-between";
+        card.innerHTML = `
+          <div>
+            <div class="flex items-start justify-between gap-2 mb-2">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-sm">
+                  <i class="fa-solid ${icon}"></i>
+                </div>
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${badgeBg}">${t.mapel || kat}</span>
+              </div>
+              <span class="font-mono text-xs font-extrabold text-slate-700 dark:text-slate-200">${t.totalSoal} Soal</span>
             </div>
-          </td>
-          <td class="py-3 px-4 text-center">
-            <span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold rounded-lg">${s.kunci}</span>
-          </td>
-          <td class="py-3 px-4 text-center font-mono font-bold">${s.bobot || 1}</td>
-          <td class="py-3 px-4 text-center">
-            <button onclick="deleteSoal('${s.idSoal}')" class="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition">
-              <i class="fa-solid fa-trash-can"></i>
+
+            <h4 class="font-extrabold text-sm text-slate-900 dark:text-white line-clamp-1 mt-1">${t.namaTemplate}</h4>
+            
+            <p class="text-xs text-slate-500 line-clamp-2 mt-2 bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 italic">
+              "${t.samplePertanyaan || 'Contoh butir pertanyaan...'}"
+            </p>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+            <button onclick="publishSingleTemplate('${kat}', '${t.namaTemplate.replace(/'/g, "\\'")}')" class="w-full py-2 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-xs shadow-md shadow-brand-600/20 transition flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-play"></i> Jadikan Ujian Tunggal
             </button>
-          </td>
+            <div class="grid grid-cols-3 gap-1.5">
+              <button onclick="viewTemplateQuestions('${kat}', '${t.namaTemplate.replace(/'/g, "\\'")}')" class="py-2 px-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-xl text-[10px] flex items-center justify-center gap-1 transition">
+                <i class="fa-regular fa-eye"></i> Soal
+              </button>
+              <button onclick="downloadTemplateExcel('${kat}', '${t.namaTemplate.replace(/'/g, "\\'")}')" class="py-2 px-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-xl text-[10px] flex items-center justify-center gap-1 transition">
+                <i class="fa-solid fa-download text-emerald-600"></i> Excel
+              </button>
+              <button onclick="deleteTemplate('${kat}', '${t.namaTemplate.replace(/'/g, "\\'")}')" class="py-2 px-1 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 text-rose-600 font-semibold rounded-xl text-[10px] flex items-center justify-center gap-1 transition">
+                <i class="fa-regular fa-trash-can"></i> Hapus
+              </button>
+            </div>
+          </div>
         `;
-        tbody.appendChild(tr);
+        grid.appendChild(card);
       });
     }
 
-    async function deleteSoal(idSoal) {
-      if (!confirm("Hapus soal ini dari bank soal?")) return;
-      try {
-        const res = await proktorApiCall('proktorDeleteSoal', { npsn: PROKTOR_STATE.proktor.npsn, idSoal });
-        const data = await res.json();
-        if (data.success) {
-          showToast("Soal berhasil dihapus.", "info");
-          loadBankSoal();
-        }
-      } catch(e) {
-        PROKTOR_STATE.bankSoal = PROKTOR_STATE.bankSoal.filter(s => s.idSoal !== idSoal);
-        renderBankSoalTable();
-        showToast("Soal dihapus (mode simulasi).", "info");
-      }
-    }
-
     /**
-     * EXCEL SOAL IMPORT & EXPORT
+     * MODAL UPLOAD TEMPLATE LOGIC
      */
-    function openUploadSoalModal() {
+    function openUploadModalForFolder(kategori) {
+      document.getElementById('uploadFolderKategori').value = kategori;
+      autoFillMapelByFolder();
+      document.getElementById('uploadNamaTemplate').value = '';
+      document.getElementById('previewUploadSoalInfo').classList.add('hidden');
+      document.getElementById('btnProcessUploadSoal').disabled = true;
+      PROKTOR_STATE.tempParsedSoal = [];
       document.getElementById('modalUploadSoal').classList.remove('hidden');
     }
+
+    function openUploadModalForCurrentFolder() {
+      openUploadModalForFolder(PROKTOR_STATE.currentOpenFolder || 'LITERASI');
+    }
+
     function closeUploadSoalModal() {
       document.getElementById('modalUploadSoal').classList.add('hidden');
+    }
+
+    function autoFillMapelByFolder() {
+      const kat = document.getElementById('uploadFolderKategori').value;
+      document.getElementById('uploadTemplateMapel').value = (kat === 'NUMERASI') ? 'Matematika' : 'Bahasa Indonesia';
     }
 
     function downloadTemplateSoal() {
@@ -822,6 +1178,50 @@
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Template_Soal");
       XLSX.writeFile(wb, "Template_Soal_TKA_SD.xlsx");
+    }
+
+    async function downloadTemplateExcel(kategori, namaTemplate) {
+      showToast("Menyiapkan berkas Excel...", "info");
+      try {
+        const res = await proktorApiCall('proktorGetTemplateQuestions', {
+          npsn: PROKTOR_STATE.proktor.npsn,
+          kategori: kategori,
+          namaTemplate: namaTemplate
+        });
+        const data = await res.json();
+        const questions = (data && data.data) ? data.data : [];
+        if (questions.length === 0) {
+          showToast("Template tidak memiliki butir soal.", "error");
+          return;
+        }
+
+        const ws_data = [
+          ["No", "Materi", "Pertanyaan", "GambarURL", "OpsiA", "OpsiB", "OpsiC", "OpsiD", "KunciJawaban", "Bobot", "Pembahasan"]
+        ];
+        questions.forEach((q, idx) => {
+          ws_data.push([
+            idx + 1,
+            q.mapel || (kategori === 'NUMERASI' ? 'Matematika' : 'Bahasa Indonesia'),
+            q.pertanyaan,
+            q.gambarUrl || "",
+            q.opsiA,
+            q.opsiB,
+            q.opsiC,
+            q.opsiD,
+            q.kunci,
+            q.bobot || 1,
+            q.pembahasan || ""
+          ]);
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet(ws_data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Template_Soal");
+        XLSX.writeFile(wb, `${namaTemplate.replace(/[^a-zA-Z0-9_-]/g, '_')}.xlsx`);
+        showToast("Berkas Excel berhasil diunduh!", "info");
+      } catch(e) {
+        showToast("Gagal mengunduh template Excel.", "error");
+      }
     }
 
     function handleFileSoalSelected(e) {
@@ -854,7 +1254,7 @@
         }));
 
         const previewInfo = document.getElementById('previewUploadSoalInfo');
-        previewInfo.innerHTML = `<strong>Siap Diimport:</strong> Terdeteksi <strong>${PROKTOR_STATE.tempParsedSoal.length}</strong> butir soal valid.`;
+        previewInfo.innerHTML = `<i class="fa-solid fa-circle-check"></i> Siap Diimport: <strong>${PROKTOR_STATE.tempParsedSoal.length}</strong> butir soal terbaca valid!`;
         previewInfo.classList.remove('hidden');
 
         document.getElementById('btnProcessUploadSoal').disabled = false;
@@ -862,33 +1262,266 @@
       reader.readAsArrayBuffer(file);
     }
 
-    async function executeUploadSoal() {
-      const paket = document.getElementById('uploadTargetPaket').value;
+    async function executeUploadTemplateSoal() {
+      const kategori = document.getElementById('uploadFolderKategori').value;
+      const namaTemplate = document.getElementById('uploadNamaTemplate').value.trim();
+      const mapel = document.getElementById('uploadTemplateMapel').value.trim();
+
+      if (!namaTemplate) {
+        showToast("Nama template / kumpulan soal wajib diisi.", "error");
+        return;
+      }
+      if (!PROKTOR_STATE.tempParsedSoal || PROKTOR_STATE.tempParsedSoal.length === 0) {
+        showToast("Silakan pilih file Excel yang berisi butir soal terlebih dahulu.", "error");
+        return;
+      }
+
       const btn = document.getElementById('btnProcessUploadSoal');
       btn.disabled = true;
       btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Menyimpan...`;
 
       try {
-        const res = await proktorApiCall('proktorSaveSoalBatch', {
+        const res = await proktorApiCall('proktorSaveTemplateBatch', {
           npsn: PROKTOR_STATE.proktor.npsn,
-          paket: paket,
-          mapel: "Literasi & Numerasi TKA SD",
+          kategori: kategori,
+          namaTemplate: namaTemplate,
+          mapel: mapel,
           soalList: PROKTOR_STATE.tempParsedSoal
         });
         const data = await res.json();
         if (data.success) {
           showToast(data.message, "info");
           closeUploadSoalModal();
-          loadBankSoal();
+          loadBankTemplates();
+        } else {
+          showToast(data.message || "Gagal menyimpan template.", "error");
         }
       } catch(e) {
-        PROKTOR_STATE.bankSoal.push(...PROKTOR_STATE.tempParsedSoal.map((s, i) => ({ ...s, idSoal: 'SOAL-LOKAL-' + (i+1), paket })));
-        renderBankSoalTable();
+        // Fallback simulasi offline
+        if (!PROKTOR_STATE.bankTemplates[kategori]) PROKTOR_STATE.bankTemplates[kategori] = [];
+        PROKTOR_STATE.bankTemplates[kategori].push({
+          namaTemplate: namaTemplate,
+          kategori: kategori,
+          mapel: mapel,
+          totalSoal: PROKTOR_STATE.tempParsedSoal.length,
+          samplePertanyaan: PROKTOR_STATE.tempParsedSoal[0].pertanyaan
+        });
         closeUploadSoalModal();
-        showToast("Soal berhasil disimpan (Mode Simulasi).", "info");
+        renderFolderMainView();
+        if (PROKTOR_STATE.currentOpenFolder === kategori) renderFolderTemplatesGrid();
+        showToast(`Template "${namaTemplate}" disimpan ke Folder ${kategori} (Mode Simulasi).`, "info");
       } finally {
         btn.disabled = false;
-        btn.innerHTML = `<i class="fa-solid fa-upload"></i> Simpan ke Server`;
+        btn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> Simpan ke Folder`;
+      }
+    }
+
+    /**
+     * LIHAT BUTIR SOAL DI MODAL
+     */
+    async function viewTemplateQuestions(kategori, namaTemplate) {
+      document.getElementById('viewTemplateModalTitle').innerText = namaTemplate;
+      document.getElementById('viewTemplateModalSubtitle').innerText = `Folder ${kategori} • Sedang memuat...`;
+      const container = document.getElementById('viewQuestionsListContainer');
+      container.innerHTML = `<div class="text-center py-8 text-slate-400"><i class="fa-solid fa-circle-notch fa-spin text-2xl"></i> Memuat butir soal...</div>`;
+      document.getElementById('modalViewQuestions').classList.remove('hidden');
+
+      try {
+        const res = await proktorApiCall('proktorGetTemplateQuestions', {
+          npsn: PROKTOR_STATE.proktor.npsn,
+          kategori: kategori,
+          namaTemplate: namaTemplate
+        });
+        const data = await res.json();
+        if (data.success && data.data) {
+          renderTemplateQuestionsList(data.data, kategori, namaTemplate);
+        }
+      } catch(e) {
+        // Fallback data simulasi
+        const dummyList = [
+          { nomor: 1, pertanyaan: "Pertanyaan contoh dalam template ini...", opsiA: "Pilihan A", opsiB: "Pilihan B", opsiC: "Pilihan C", opsiD: "Pilihan D", kunci: "A", bobot: 1, pembahasan: "Pembahasan soal..." }
+        ];
+        renderTemplateQuestionsList(dummyList, kategori, namaTemplate);
+      }
+    }
+
+    function renderTemplateQuestionsList(questions, kategori, namaTemplate) {
+      document.getElementById('viewTemplateModalSubtitle').innerText = `Folder ${kategori} • ${questions.length} Butir Soal`;
+      const container = document.getElementById('viewQuestionsListContainer');
+      container.innerHTML = '';
+
+      if (questions.length === 0) {
+        container.innerHTML = `<div class="text-center py-8 text-slate-400">Tidak ada butir soal dalam template ini.</div>`;
+        return;
+      }
+
+      questions.forEach((q, idx) => {
+        const div = document.createElement('div');
+        div.className = "bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 text-xs space-y-2";
+        div.innerHTML = `
+          <div class="flex items-center justify-between pb-1.5 border-b border-slate-200/50 dark:border-slate-700/50">
+            <span class="font-extrabold text-brand-600">Soal No. ${idx + 1}</span>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-extrabold rounded-lg text-[10px]">Kunci: ${q.kunci}</span>
+              <span class="text-slate-400 font-mono">Bobot: ${q.bobot || 1}</span>
+            </div>
+          </div>
+          <div class="font-medium text-slate-800 dark:text-slate-100 leading-relaxed">${q.pertanyaan}</div>
+          <div class="grid grid-cols-2 gap-2 text-slate-600 dark:text-slate-300 pt-1">
+            <div class="${q.kunci === 'A' ? 'font-bold text-emerald-600' : ''}"><strong>A.</strong> ${q.opsiA}</div>
+            <div class="${q.kunci === 'B' ? 'font-bold text-emerald-600' : ''}"><strong>B.</strong> ${q.opsiB}</div>
+            <div class="${q.kunci === 'C' ? 'font-bold text-emerald-600' : ''}"><strong>C.</strong> ${q.opsiC}</div>
+            <div class="${q.kunci === 'D' ? 'font-bold text-emerald-600' : ''}"><strong>D.</strong> ${q.opsiD}</div>
+          </div>
+          ${q.pembahasan ? `<div class="text-[11px] text-slate-400 bg-white dark:bg-slate-900 p-2 rounded-lg italic">Pembahasan: ${q.pembahasan}</div>` : ''}
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function closeViewQuestionsModal() {
+      document.getElementById('modalViewQuestions').classList.add('hidden');
+    }
+
+    async function deleteTemplate(kategori, namaTemplate) {
+      if (!confirm(`Hapus seluruh butir soal dalam template "${namaTemplate}" dari Folder ${kategori}?`)) return;
+
+      try {
+        const res = await proktorApiCall('proktorDeleteTemplate', {
+          npsn: PROKTOR_STATE.proktor.npsn,
+          kategori: kategori,
+          namaTemplate: namaTemplate
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, "info");
+          loadBankTemplates();
+        }
+      } catch(e) {
+        if (PROKTOR_STATE.bankTemplates[kategori]) {
+          PROKTOR_STATE.bankTemplates[kategori] = PROKTOR_STATE.bankTemplates[kategori].filter(t => t.namaTemplate !== namaTemplate);
+        }
+        renderFolderMainView();
+        renderFolderTemplatesGrid();
+        showToast("Template berhasil dihapus (Mode Simulasi).", "info");
+      }
+    }
+
+    /**
+     * AKTIVASI / PUBLISH PAKET UJIAN
+     */
+    async function publishSingleTemplate(kategori, namaTemplate) {
+      if (!confirm(`Aktifkan template "${namaTemplate}" sebagai Paket Ujian CBT sekarang? Siswa akan langsung mengerjakan soal dari template ini.`)) return;
+
+      try {
+        const res = await proktorApiCall('proktorPublishTemplatesToExam', {
+          npsn: PROKTOR_STATE.proktor.npsn,
+          templateNames: [namaTemplate],
+          targetPaket: "PAKET-A"
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, "info");
+          loadActiveExamInfo();
+        }
+      } catch(e) {
+        document.getElementById('activeExamSummaryTitle').innerText = `${namaTemplate}`;
+        document.getElementById('activeExamQuestionCount').innerText = `Siap Dikerjakan Siswa (Mode Simulasi)`;
+        showToast(`Template "${namaTemplate}" berhasil dipublikasikan sebagai ujian aktif!`, "info");
+      }
+    }
+
+    /**
+     * MODAL RAKIT PAKET UJIAN GABUNGAN (LITERASI + NUMERASI)
+     */
+    function openRakitPaketModal() {
+      const litSelect = document.getElementById('selectRakitLiterasi');
+      const numSelect = document.getElementById('selectRakitNumerasi');
+
+      litSelect.innerHTML = `<option value="">-- Lewati / Tanpa Literasi --</option>`;
+      numSelect.innerHTML = `<option value="">-- Lewati / Tanpa Numerasi --</option>`;
+
+      const litList = (PROKTOR_STATE.bankTemplates && PROKTOR_STATE.bankTemplates.LITERASI) || [];
+      const numList = (PROKTOR_STATE.bankTemplates && PROKTOR_STATE.bankTemplates.NUMERASI) || [];
+
+      litList.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.namaTemplate;
+        opt.dataset.count = t.totalSoal || 0;
+        opt.innerText = `${t.namaTemplate} (${t.totalSoal} Soal)`;
+        litSelect.appendChild(opt);
+      });
+
+      numList.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.namaTemplate;
+        opt.dataset.count = t.totalSoal || 0;
+        opt.innerText = `${t.namaTemplate} (${t.totalSoal} Soal)`;
+        numSelect.appendChild(opt);
+      });
+
+      calculateRakitSummary();
+      document.getElementById('modalRakitPaket').classList.remove('hidden');
+    }
+
+    function closeRakitPaketModal() {
+      document.getElementById('modalRakitPaket').classList.add('hidden');
+    }
+
+    function calculateRakitSummary() {
+      const litSelect = document.getElementById('selectRakitLiterasi');
+      const numSelect = document.getElementById('selectRakitNumerasi');
+
+      const litOpt = litSelect.selectedOptions[0];
+      const numOpt = numSelect.selectedOptions[0];
+
+      const litCount = litOpt && litOpt.dataset.count ? Number(litOpt.dataset.count) : 0;
+      const numCount = numOpt && numOpt.dataset.count ? Number(numOpt.dataset.count) : 0;
+
+      const total = litCount + numCount;
+      document.getElementById('rakitTotalSoalCount').innerText = `${total} Butir Soal`;
+    }
+
+    async function executePublishRakitPaket() {
+      const litSelect = document.getElementById('selectRakitLiterasi');
+      const numSelect = document.getElementById('selectRakitNumerasi');
+      const targetPaket = document.getElementById('rakitTargetPaket').value.trim() || 'PAKET-A';
+
+      const selectedTemplates = [];
+      if (litSelect.value) selectedTemplates.push(litSelect.value);
+      if (numSelect.value) selectedTemplates.push(numSelect.value);
+
+      if (selectedTemplates.length === 0) {
+        showToast("Pilih minimal 1 template dari folder Literasi atau Numerasi.", "error");
+        return;
+      }
+
+      const btn = document.getElementById('btnPublishRakit');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Mempublikasikan...`;
+
+      try {
+        const res = await proktorApiCall('proktorPublishTemplatesToExam', {
+          npsn: PROKTOR_STATE.proktor.npsn,
+          templateNames: selectedTemplates,
+          targetPaket: targetPaket
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, "info");
+          closeRakitPaketModal();
+          loadActiveExamInfo();
+        } else {
+          showToast(data.message || "Gagal mempublikasikan paket ujian.", "error");
+        }
+      } catch(e) {
+        closeRakitPaketModal();
+        document.getElementById('activeExamSummaryTitle').innerText = `${selectedTemplates.join(' + ')}`;
+        document.getElementById('activeExamQuestionCount').innerText = `Paket Ujian Gabungan Aktif (Mode Simulasi)`;
+        showToast("Paket Ujian Gabungan berhasil dipublikasikan!", "info");
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-rocket"></i> <span>Publikasikan Sebagai Ujian Aktif Sekarang</span>`;
       }
     }
 
@@ -1303,11 +1936,33 @@
      * FALLBACK SIMULASI OFFLINE
      */
     function loadDummyDataOffline() {
-      PROKTOR_STATE.bankSoal = [
-        { idSoal: "SOAL-001", paket: "PAKET-A", pertanyaan: "Luas tanah panjang 24m dan lebar 15m adalah...", opsiA: "360 m²", opsiB: "380 m²", opsiC: "390 m²", opsiD: "400 m²", kunci: "A", bobot: 1 },
-        { idSoal: "SOAL-002", paket: "PAKET-A", pertanyaan: "Pokok pikiran manfaat Sungai Bedadung...", opsiA: "Pencemaran", opsiB: "Manfaat irigasi sawah", opsiC: "Banjir", opsiD: "Kekeringan", kunci: "B", bobot: 1 },
-        { idSoal: "SOAL-003", paket: "PAKET-A", pertanyaan: "(144:12) + (15x6) - 25 = ...", opsiA: "72", opsiB: "77", opsiC: "87", opsiD: "92", kunci: "B", bobot: 1 }
-      ];
+      PROKTOR_STATE.bankTemplates = {
+        LITERASI: [
+          {
+            namaTemplate: "Template Literasi 01 (Teks Informasi)",
+            kategori: "LITERASI",
+            mapel: "Bahasa Indonesia",
+            totalSoal: 2,
+            samplePertanyaan: "Bacalah kutipan berikut: 'Sungai Bedadung mengalir membelah Kabupaten Jember...'"
+          },
+          {
+            namaTemplate: "Template Literasi 02 (Teks Fiksi & Dongeng)",
+            kategori: "LITERASI",
+            mapel: "Bahasa Indonesia",
+            totalSoal: 1,
+            samplePertanyaan: "Kisah persahabatan anak-anak desa di Ambulu..."
+          }
+        ],
+        NUMERASI: [
+          {
+            namaTemplate: "Template Numerasi 01 (Hitung Campuran & Geometri)",
+            kategori: "NUMERASI",
+            mapel: "Matematika",
+            totalSoal: 2,
+            samplePertanyaan: "Hasil dari (144 : 12) + (15 x 6) - 25 adalah..."
+          }
+        ]
+      };
       PROKTOR_STATE.pesertaList = [
         { nisn: "0123456789", nama: "Ahmad Fauzi", kelas: "VI-A", tokenUjian: "TKA26", statusUjian: "SELESAI" },
         { nisn: "0123456790", nama: "Siti Aisyah", kelas: "VI-A", tokenUjian: "TKA26", statusUjian: "SEDANG_MENGERJAKAN" },
@@ -1317,7 +1972,10 @@
         { nisn: "0123456789", nama: "Ahmad Fauzi", kelas: "VI-A", jumlahBenar: 3, jumlahSalah: 0, jumlahKosong: 0, nilaiAkhir: 100 }
       ];
 
-      renderBankSoalTable();
+      renderFolderMainView();
+      if (PROKTOR_STATE.currentOpenFolder) {
+        renderFolderTemplatesGrid();
+      }
       renderPesertaTable();
       renderRekapTable();
 

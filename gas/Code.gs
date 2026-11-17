@@ -93,7 +93,7 @@ function doPost(e) {
         response = proktorLogin(payload);
         break;
 
-      // Bank Soal
+      // Bank Soal Tradisional
       case "proktorSaveSoalBatch":
         response = proktorSaveSoalBatch(payload);
         break;
@@ -105,6 +105,26 @@ function doPost(e) {
         break;
       case "proktorClearPaket":
         response = proktorClearPaket(payload);
+        break;
+
+      // Manajemen 2 Folder Bank Soal (Literasi & Numerasi)
+      case "proktorGetBankTemplates":
+        response = proktorGetBankTemplates(payload);
+        break;
+      case "proktorGetTemplateQuestions":
+        response = proktorGetTemplateQuestions(payload);
+        break;
+      case "proktorSaveTemplateBatch":
+        response = proktorSaveTemplateBatch(payload);
+        break;
+      case "proktorDeleteTemplate":
+        response = proktorDeleteTemplate(payload);
+        break;
+      case "proktorPublishTemplatesToExam":
+        response = proktorPublishTemplatesToExam(payload);
+        break;
+      case "proktorGetActiveExamInfo":
+        response = proktorGetActiveExamInfo(payload);
         break;
 
       // Peserta Ujian
@@ -241,7 +261,42 @@ function setupDatabase() {
     pesertaSheet.appendRow(["0123456791", "Budi Santoso", "VI-B", "TKA26", "BELUM_MULAI", "", ""]);
   }
 
-  // Sheet Soal
+  // Sheet Bank Soal (2 Folder: LITERASI & NUMERASI)
+  const bankHeaders = [
+    "idSoal", "kategori", "namaTemplate", "mapel", "pertanyaan", "gambarUrl", "opsiA", "opsiB", "opsiC", "opsiD", "kunci", "bobot", "pembahasan"
+  ];
+  const bankSheet = getOrCreateSheet(ss, "BankSoal_" + sampleNpsn, bankHeaders);
+  if (bankSheet.getLastRow() <= 1) {
+    // Template Literasi
+    bankSheet.appendRow([
+      "LIT-001", "LITERASI", "Template Literasi 01 (Teks Informasi)", "Bahasa Indonesia",
+      "Bacalah kutipan berikut: 'Sungai Bedadung mengalir membelah Kabupaten Jember. Airnya menjadi tumpuan irigasi ribuan hektar sawah petani.' Pokok pikiran paragraf tersebut adalah...",
+      "", "Sungai Bedadung tercemar limbah", "Manfaat Sungai Bedadung bagi pengairan sawah di Jember", "Petani Jember enggan bercocok tanam", "Banjir tahunan di Sungai Bedadung", "B", 1,
+      "Gagasan utama paragraf adalah manfaat Sungai Bedadung sebagai tumpuan irigasi sawah para petani."
+    ]);
+    bankSheet.appendRow([
+      "LIT-002", "LITERASI", "Template Literasi 01 (Teks Informasi)", "Bahasa Indonesia",
+      "Kecamatan Ambulu memiliki objek wisata Pantai Watu Ulo dan Pantai Pasir Putih Malikan (Papuma). Nilai ekonomi keberadaan tempat wisata ini bagi masyarakat sekitar adalah...",
+      "", "Memicu kemacetan jalan raya", "Membuka lapangan kerja dan usaha UMKM warga lokal", "Mengurangi hasil panen nelayan", "Menyebabkan sampah di pemukiman", "B", 1,
+      "Tempat wisata memberikan dampak ekonomi positif berupa lapangan kerja dan usaha warga sekitar."
+    ]);
+
+    // Template Numerasi
+    bankSheet.appendRow([
+      "NUM-001", "NUMERASI", "Template Numerasi 01 (Hitung Campuran & Geometri)", "Matematika",
+      "Hasil dari (144 : 12) + (15 x 6) - 25 adalah...",
+      "", "72", "77", "87", "92", "B", 1,
+      "(144 : 12) = 12. (15 x 6) = 90. 12 + 90 - 25 = 102 - 25 = 77."
+    ]);
+    bankSheet.appendRow([
+      "NUM-002", "NUMERASI", "Template Numerasi 01 (Hitung Campuran & Geometri)", "Matematika",
+      "Pak Rudi memiliki sebidang tanah berbentuk persegi panjang dengan panjang 24 meter dan lebar 15 meter. Berapakah luas tanah Pak Rudi seluruhnya?",
+      "", "360 m²", "380 m²", "390 m²", "400 m²", "A", 1,
+      "Luas persegi panjang = Panjang x Lebar = 24 m x 15 m = 360 m²."
+    ]);
+  }
+
+  // Sheet Soal (Ujian Aktif)
   const soalSheet = getOrCreateSheet(ss, "Soal_" + sampleNpsn, [
     "idSoal", "paket", "mapel", "pertanyaan", "gambarUrl", "opsiA", "opsiB", "opsiC", "opsiD", "kunci", "bobot", "pembahasan"
   ]);
@@ -441,6 +496,226 @@ function proktorClearPaket(payload) {
   }
 
   return { success: true, message: deletedCount + " soal dari paket " + paket + " berhasil dihapus." };
+}
+
+/**
+ * =========================================================================================
+ * LOGIKA BISNIS: 2 FOLDER BANK SOAL (LITERASI & NUMERASI)
+ * =========================================================================================
+ */
+
+function proktorGetBankTemplates(payload) {
+  const { npsn } = payload;
+  if (!npsn) return { success: false, message: "NPSN wajib diisi." };
+
+  const ss = getSpreadsheet();
+  const bankHeaders = [
+    "idSoal", "kategori", "namaTemplate", "mapel", "pertanyaan", "gambarUrl", "opsiA", "opsiB", "opsiC", "opsiD", "kunci", "bobot", "pembahasan"
+  ];
+  const sheet = getOrCreateSheet(ss, "BankSoal_" + npsn, bankHeaders);
+  const rows = sheetToObjects(sheet);
+
+  const result = {
+    LITERASI: [],
+    NUMERASI: []
+  };
+
+  const groupMap = {
+    LITERASI: new Map(),
+    NUMERASI: new Map()
+  };
+
+  rows.forEach(r => {
+    let kat = String(r.kategori || "LITERASI").trim().toUpperCase();
+    if (kat !== "NUMERASI") kat = "LITERASI";
+
+    const tName = String(r.namaTemplate || "Template Standar").trim();
+    if (!groupMap[kat].has(tName)) {
+      groupMap[kat].set(tName, {
+        namaTemplate: tName,
+        kategori: kat,
+        mapel: r.mapel || (kat === "LITERASI" ? "Bahasa Indonesia" : "Matematika"),
+        totalSoal: 0,
+        samplePertanyaan: r.pertanyaan
+      });
+    }
+
+    const tObj = groupMap[kat].get(tName);
+    tObj.totalSoal++;
+  });
+
+  groupMap.LITERASI.forEach(val => result.LITERASI.push(val));
+  groupMap.NUMERASI.forEach(val => result.NUMERASI.push(val));
+
+  return {
+    success: true,
+    data: result
+  };
+}
+
+function proktorGetTemplateQuestions(payload) {
+  const { npsn, kategori, namaTemplate } = payload;
+  if (!npsn || !namaTemplate) return { success: false, message: "Parameter tidak lengkap." };
+
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName("BankSoal_" + npsn);
+  if (!sheet) return { success: true, data: [] };
+
+  const rows = sheetToObjects(sheet);
+  const filtered = rows.filter(r => {
+    const katMatch = kategori ? (String(r.kategori).trim().toUpperCase() === String(kategori).trim().toUpperCase()) : true;
+    return katMatch && String(r.namaTemplate).trim() === String(namaTemplate).trim();
+  });
+
+  return {
+    success: true,
+    total: filtered.length,
+    data: filtered
+  };
+}
+
+function proktorSaveTemplateBatch(payload) {
+  const { npsn, kategori, namaTemplate, mapel, soalList } = payload;
+  if (!npsn || !namaTemplate || !soalList || !Array.isArray(soalList) || soalList.length === 0) {
+    return { success: false, message: "Nama template dan daftar soal wajib diisi." };
+  }
+
+  const ss = getSpreadsheet();
+  const bankHeaders = [
+    "idSoal", "kategori", "namaTemplate", "mapel", "pertanyaan", "gambarUrl", "opsiA", "opsiB", "opsiC", "opsiD", "kunci", "bobot", "pembahasan"
+  ];
+  const sheet = getOrCreateSheet(ss, "BankSoal_" + npsn, bankHeaders);
+
+  const kat = String(kategori || "LITERASI").trim().toUpperCase();
+  const prefix = kat === "NUMERASI" ? "NUM" : "LIT";
+
+  const rows = soalList.map((item, idx) => {
+    const idSoal = item.idSoal || (`${prefix}-` + Utilities.getUuid().substring(0, 8).toUpperCase());
+    return [
+      idSoal,
+      kat,
+      namaTemplate.trim(),
+      item.mapel || mapel || (kat === "LITERASI" ? "Bahasa Indonesia" : "Matematika"),
+      item.pertanyaan || "",
+      item.gambarUrl || "",
+      item.opsiA || "",
+      item.opsiB || "",
+      item.opsiC || "",
+      item.opsiD || "",
+      String(item.kunci || "A").trim().toUpperCase(),
+      Number(item.bobot) || 1,
+      item.pembahasan || ""
+    ];
+  });
+
+  sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, bankHeaders.length).setValues(rows);
+
+  return {
+    success: true,
+    message: `${rows.length} butir soal berhasil disimpan ke Folder ${kat} dalam template "${namaTemplate}".`
+  };
+}
+
+function proktorDeleteTemplate(payload) {
+  const { npsn, kategori, namaTemplate } = payload;
+  if (!npsn || !namaTemplate) return { success: false, message: "Parameter tidak lengkap." };
+
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName("BankSoal_" + npsn);
+  if (!sheet) return { success: false, message: "Bank soal belum tersedia." };
+
+  const rows = sheetToObjects(sheet);
+  let deletedCount = 0;
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const r = rows[i];
+    const katMatch = kategori ? (String(r.kategori).trim().toUpperCase() === String(kategori).trim().toUpperCase()) : true;
+    if (katMatch && String(r.namaTemplate).trim() === String(namaTemplate).trim()) {
+      sheet.deleteRow(r._rowIndex);
+      deletedCount++;
+    }
+  }
+
+  return {
+    success: true,
+    message: `Template "${namaTemplate}" berhasil dihapus (${deletedCount} butir soal dihapus).`
+  };
+}
+
+function proktorPublishTemplatesToExam(payload) {
+  const { npsn, templateNames, targetPaket } = payload;
+  if (!npsn || !templateNames || !Array.isArray(templateNames) || templateNames.length === 0) {
+    return { success: false, message: "Pilih minimal 1 template untuk dipublikasikan." };
+  }
+
+  const ss = getSpreadsheet();
+  const bankSheet = ss.getSheetByName("BankSoal_" + npsn);
+  if (!bankSheet) return { success: false, message: "Bank soal belum ada." };
+
+  const bankRows = sheetToObjects(bankSheet);
+  const targetSet = new Set(templateNames.map(t => String(t).trim()));
+
+  const selectedQuestions = bankRows.filter(r => targetSet.has(String(r.namaTemplate).trim()));
+
+  if (selectedQuestions.length === 0) {
+    return { success: false, message: "Tidak ditemukan butir soal pada template yang dipilih." };
+  }
+
+  // Siapkan sheet Soal_{npsn}
+  const soalHeaders = [
+    "idSoal", "paket", "mapel", "pertanyaan", "gambarUrl", "opsiA", "opsiB", "opsiC", "opsiD", "kunci", "bobot", "pembahasan"
+  ];
+  let soalSheet = ss.getSheetByName("Soal_" + npsn);
+  if (!soalSheet) {
+    soalSheet = getOrCreateSheet(ss, "Soal_" + npsn, soalHeaders);
+  } else {
+    // Kosongkan soal aktif lama jika ada
+    const lastRow = soalSheet.getLastRow();
+    if (lastRow > 1) {
+      soalSheet.deleteRows(2, lastRow - 1);
+    }
+  }
+
+  const pName = String(targetPaket || "PAKET-A").trim().toUpperCase();
+
+  const newRows = selectedQuestions.map((q, idx) => [
+    q.idSoal || ("SOAL-" + (idx + 1)),
+    pName,
+    q.mapel || "Literasi & Numerasi TKA SD",
+    q.pertanyaan,
+    q.gambarUrl || "",
+    q.opsiA,
+    q.opsiB,
+    q.opsiC,
+    q.opsiD,
+    q.kunci,
+    Number(q.bobot) || 1,
+    q.pembahasan || ""
+  ]);
+
+  soalSheet.getRange(2, 1, newRows.length, soalHeaders.length).setValues(newRows);
+
+  return {
+    success: true,
+    message: `Berhasil mempublikasikan ${newRows.length} butir soal dari template [${templateNames.join(", ")}] menjadi Paket Ujian Aktif!`,
+    totalSoal: newRows.length,
+    paket: pName
+  };
+}
+
+function proktorGetActiveExamInfo(payload) {
+  const { npsn } = payload;
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName("Soal_" + npsn);
+  if (!sheet) return { success: true, totalSoal: 0, paket: "BELUM_ADA" };
+
+  const list = sheetToObjects(sheet);
+  const paket = list.length > 0 ? list[0].paket : "-";
+
+  return {
+    success: true,
+    totalSoal: list.length,
+    paket: paket
+  };
 }
 
 function proktorSavePesertaBatch(payload) {
