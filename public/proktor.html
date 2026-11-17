@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Portal Proktor & Guru - SiSiswa TKA SD</title>
+  
+  <!-- Tailwind CSS CDN v3.4 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- SheetJS (Excel Import & Export) -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+  <!-- QRCode.js (Generator Cetak Kartu Peserta) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <!-- Tailwind Configuration -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#EEF2FF',
+              100: '#E0E7FF',
+              500: '#6366F1',
+              600: '#4F46E5',
+              700: '#4338CA',
+              800: '#3730A3',
+              900: '#312E81',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    html, body {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Print Formatting: 8 Kartu CR80 per A4 Landscape */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #printContainer, #printContainer * {
+        visibility: visible;
+      }
+      #printContainer {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        background: white !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      @page {
+        size: A4 portrait;
+        margin: 10mm;
+      }
+      @page landscape-card {
+        size: A4 landscape;
+        margin: 8mm;
+      }
+      .print-landscape {
+        page: landscape-card;
+      }
+    }
+
+    /* CR80 Card Dimensions: 54mm x 86mm */
+    .card-cr80 {
+      width: 66mm;
+      height: 98mm;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body class="h-full bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans antialiased flex flex-col justify-between">
+
+  <!-- TOAST FLOATING ALERT -->
+  <div id="toastContainer" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-11/12 max-w-md"></div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: UPLOAD EXCEL SOAL -->
+  <!-- ========================================================================= -->
+  <div id="modalUploadSoal" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
+          <i class="fa-solid fa-file-excel text-emerald-600"></i> Import Soal dari Excel
+        </h3>
+        <button onclick="closeUploadSoalModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Target Paket Ujian</label>
+          <select id="uploadTargetPaket" class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold">
+            <option value="PAKET-A">PAKET-A (Literasi & Numerasi)</option>
+            <option value="PAKET-B">PAKET-B</option>
+            <option value="PAKET-C">PAKET-C</option>
+          </select>
+        </div>
+
+        <!-- Drag & Drop Zone -->
+        <div id="dropZoneSoal" onclick="document.getElementById('fileInputSoal').click()"
+             class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-brand-600 dark:hover:border-brand-500 rounded-2xl p-6 text-center cursor-pointer transition bg-slate-50/50 dark:bg-slate-800/40">
+          <i class="fa-solid fa-cloud-arrow-up text-4xl text-slate-400 mb-2"></i>
+          <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">Klik atau geser file spreadsheet (.xlsx / .xls)</p>
+          <p class="text-xs text-slate-400 mt-1">Gunakan template resmi untuk hasil pembacaan optimal.</p>
+          <input type="file" id="fileInputSoal" accept=".xlsx, .xls" class="hidden" onchange="handleFileSoalSelected(event)">
+        </div>
+
+        <div id="previewUploadSoalInfo" class="hidden text-xs bg-brand-50 dark:bg-brand-950/40 p-3 rounded-xl border border-brand-200 dark:border-brand-800 text-brand-800 dark:text-brand-300">
+          <!-- Live Preview Info -->
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 pt-2">
+          <button onclick="downloadTemplateSoal()" type="button" class="py-3 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-download"></i> Unduh Template
+          </button>
+          <button onclick="executeUploadSoal()" id="btnProcessUploadSoal" disabled type="button" class="py-3 px-4 bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white font-bold rounded-xl text-xs shadow-lg shadow-brand-600/30 flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-upload"></i> Simpan ke Server
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: UPLOAD EXCEL PESERTA -->
+  <!-- ========================================================================= -->
+  <div id="modalUploadPeserta" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
+          <i class="fa-solid fa-users text-brand-600"></i> Import Roster Peserta dari Excel
+        </h3>
+        <button onclick="closeUploadPesertaModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <div id="dropZonePeserta" onclick="document.getElementById('fileInputPeserta').click()"
+             class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-brand-600 dark:hover:border-brand-500 rounded-2xl p-6 text-center cursor-pointer transition bg-slate-50/50 dark:bg-slate-800/40">
+          <i class="fa-solid fa-file-import text-4xl text-slate-400 mb-2"></i>
+          <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">Klik atau geser file roster peserta (.xlsx / .xls)</p>
+          <p class="text-xs text-slate-400 mt-1">Kolom wajib: NISN, Nama, Kelas, TokenUjian</p>
+          <input type="file" id="fileInputPeserta" accept=".xlsx, .xls" class="hidden" onchange="handleFilePesertaSelected(event)">
+        </div>
+
+        <div id="previewUploadPesertaInfo" class="hidden text-xs bg-brand-50 dark:bg-brand-950/40 p-3 rounded-xl border border-brand-200 dark:border-brand-800 text-brand-800 dark:text-brand-300">
+          <!-- Preview Info -->
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 pt-2">
+          <button onclick="downloadTemplatePeserta()" type="button" class="py-3 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-download"></i> Unduh Template
+          </button>
+          <button onclick="executeUploadPeserta()" id="btnProcessUploadPeserta" disabled type="button" class="py-3 px-4 bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white font-bold rounded-xl text-xs shadow-lg shadow-brand-600/30 flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-upload"></i> Simpan Peserta
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 1. VIEW LOGIN PROKTOR -->
+  <!-- ========================================================================= -->
+  <section id="viewProktorLogin" class="flex-1 flex flex-col justify-center items-center p-4 sm:p-6 max-w-md mx-auto w-full">
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-brand-600 shadow-xl shadow-brand-600/30 text-white text-3xl mb-4">
+        <i class="fa-solid fa-user-shield"></i>
+      </div>
+      <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+        Portal <span class="text-brand-600">Proktor TKA</span>
+      </h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+        Manajemen Asesmen CBT SD • Koorwil Ambulu
+      </p>
+    </div>
+
+    <div class="bg-white dark:bg-slate-900 w-full rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200/80 dark:border-slate-800">
+      <form id="formProktorLogin" onsubmit="handleProktorLogin(event)" class="space-y-4">
+        
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase mb-2">
+            <i class="fa-solid fa-school text-brand-600 mr-1"></i> Satuan Pendidikan
+          </label>
+          <select id="proktorNpsn" required class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-600">
+            <option value="" disabled selected>Pilih Sekolah Anda...</option>
+            <option value="20524058">SDN Sumberejo 04 (20524058)</option>
+            <option value="20524059">SDN Sumberejo 01 (20524059)</option>
+            <option value="20524060">SDN Sumberejo 02 (20524060)</option>
+            <option value="20524061">SDN Ambulu 01 (20524061)</option>
+            <option value="20524062">SDN Ambulu 02 (20524062)</option>
+            <option value="20524063">SDN Ambulu 03 (20524063)</option>
+            <option value="20524064">SDN Karanganyar 01 (20524064)</option>
+            <option value="20524065">SDN Karanganyar 02 (20524065)</option>
+            <option value="20524066">SDN Tegalsari 01 (20524066)</option>
+            <option value="20524067">SDN Tegalsari 02 (20524067)</option>
+            <option value="20524068">SDN Pontang 01 (20524068)</option>
+            <option value="20524069">SDN Pontang 02 (20524069)</option>
+            <option value="20524070">SDN Andongsari 01 (20524070)</option>
+            <option value="20524071">SDN Sabrang 01 (20524071)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase mb-2">
+            <i class="fa-solid fa-shield-halved text-brand-600 mr-1"></i> Kode Unik Lembaga
+          </label>
+          <input type="text" id="proktorKodeUnik" required placeholder="Contoh: SMB04-3918"
+                 class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-brand-600 uppercase">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase mb-2">
+            <i class="fa-solid fa-lock text-brand-600 mr-1"></i> PIN Proktor (6 Digit)
+          </label>
+          <input type="password" id="proktorPin" required maxlength="6" inputmode="numeric" placeholder="••••••"
+                 class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-center text-lg font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-brand-600">
+          <p class="text-[11px] text-slate-400 mt-1">Default PIN awal: <strong>123456</strong></p>
+        </div>
+
+        <button type="submit" id="btnProktorLogin"
+                class="w-full py-4 bg-brand-600 hover:bg-brand-700 active:scale-[0.98] text-white font-bold rounded-2xl shadow-lg shadow-brand-600/30 transition flex items-center justify-center gap-2 mt-4">
+          <span>Masuk Panel Proktor</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+
+      </form>
+
+      <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 text-center">
+        <a href="index.html" class="text-xs font-semibold text-slate-500 hover:text-brand-600 transition flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-arrow-left"></i>
+          <span>Kembali ke Halaman Siswa CBT</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- 2. VIEW DASHBOARD PROKTOR UTAMA -->
+  <!-- ========================================================================= -->
+  <section id="viewProktorDashboard" class="flex-1 flex flex-col w-full h-full hidden">
+    
+    <!-- Top Header -->
+    <header class="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 px-4 py-3">
+      <div class="max-w-7xl mx-auto flex items-center justify-between gap-3">
+        
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-brand-600 text-white flex items-center justify-center font-bold text-base shadow-md shadow-brand-600/20">
+            <i class="fa-solid fa-user-shield"></i>
+          </div>
+          <div>
+            <div id="dashSchoolName" class="text-sm font-extrabold text-slate-900 dark:text-white leading-tight">SDN Sumberejo 04</div>
+            <div class="flex items-center gap-2 text-xs text-slate-500">
+              <span id="dashProctorName">Bambang Sudarsono, S.Pd.</span>
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span class="text-[11px] text-emerald-600 font-semibold">Online</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- Refresh Cloud Data -->
+          <button onclick="refreshProktorData()" title="Sinkronkan Cloud" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center transition">
+            <i id="syncIcon" class="fa-solid fa-rotate"></i>
+          </button>
+          <!-- Logout Button -->
+          <button onclick="logoutProktor()" class="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 text-rose-600 text-xs font-bold transition flex items-center gap-1.5">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            <span class="hidden sm:inline">Keluar</span>
+          </button>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- Navigation Tabs Bar -->
+    <nav class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4">
+      <div class="max-w-7xl mx-auto flex gap-2 sm:gap-6 overflow-x-auto py-2 text-xs font-bold">
+        <button onclick="switchTab('tabBankSoal')" id="tabBtn_bankSoal" class="tab-btn px-3 py-2 rounded-xl bg-brand-50 dark:bg-brand-950/60 text-brand-600 transition flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-book"></i> Bank Soal
+        </button>
+        <button onclick="switchTab('tabPeserta')" id="tabBtn_peserta" class="tab-btn px-3 py-2 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-white transition flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-users"></i> Data Peserta & Token
+        </button>
+        <button onclick="switchTab('tabRekap')" id="tabBtn_rekap" class="tab-btn px-3 py-2 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-white transition flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-chart-pie"></i> Rekap Nilai & Cetak
+        </button>
+        <button onclick="switchTab('tabKop')" id="tabBtn_kop" class="tab-btn px-3 py-2 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-white transition flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-sliders"></i> Pengaturan Kop
+        </button>
+      </div>
+    </nav>
+
+    <!-- TAB CONTENTS CONTAINER -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 pb-24 space-y-6">
+
+      <!-- ===================================================================== -->
+      <!-- TAB 1: BANK SOAL -->
+      <!-- ===================================================================== -->
+      <div id="tabBankSoal" class="tab-content space-y-4">
+        
+        <!-- Header Aksi 2x2 Responsive Grid -->
+        <div class="grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-between gap-2.5">
+          <div class="flex items-center gap-2 col-span-2 sm:col-span-1">
+            <span class="text-xs font-bold text-slate-500">Pilih Paket:</span>
+            <select id="filterPaketSoal" onchange="loadBankSoal()" class="px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold">
+              <option value="PAKET-A">PAKET-A (Aktif)</option>
+              <option value="PAKET-B">PAKET-B</option>
+              <option value="PAKET-C">PAKET-C</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 sm:flex gap-2 col-span-2 sm:col-span-1">
+            <button onclick="downloadTemplateSoal()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition">
+              <i class="fa-solid fa-download text-emerald-600"></i> Unduh Template
+            </button>
+            <button onclick="openUploadSoalModal()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 transition">
+              <i class="fa-solid fa-file-excel"></i> Upload Excel
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabel Bank Soal -->
+        <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200/80 dark:border-slate-800 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 dark:bg-slate-800/60 uppercase font-extrabold text-slate-500 border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                  <th class="py-3.5 px-4 w-12 text-center">No</th>
+                  <th class="py-3.5 px-4 w-28">ID / Paket</th>
+                  <th class="py-3.5 px-4">Pertanyaan & Opsi Jawaban</th>
+                  <th class="py-3.5 px-4 w-20 text-center">Kunci</th>
+                  <th class="py-3.5 px-4 w-16 text-center">Bobot</th>
+                  <th class="py-3.5 px-4 w-16 text-center">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyBankSoal" class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                <!-- Injected by JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ===================================================================== -->
+      <!-- TAB 2: DATA PESERTA & TOKEN -->
+      <!-- ===================================================================== -->
+      <div id="tabPeserta" class="tab-content space-y-4 hidden">
+        
+        <!-- Token Broadcast Card -->
+        <div class="bg-gradient-to-r from-brand-600 to-indigo-700 rounded-3xl p-5 text-white shadow-xl shadow-brand-600/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-2xl">
+              <i class="fa-solid fa-key"></i>
+            </div>
+            <div>
+              <div class="text-[11px] uppercase tracking-wider font-bold opacity-80">Token Ujian Aktif Hari Ini</div>
+              <div id="displayActiveToken" class="text-3xl font-extrabold font-mono tracking-widest mt-0.5">TKA26</div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <input type="text" id="inputNewToken" placeholder="TOKEN BARU" maxlength="8"
+                   class="px-3.5 py-2 bg-white/10 border border-white/30 rounded-xl text-white placeholder-white/50 text-xs font-mono uppercase font-bold focus:outline-none w-full sm:w-32">
+            <button onclick="updateActiveToken()" class="px-4 py-2 bg-white text-brand-700 hover:bg-slate-100 font-bold rounded-xl text-xs whitespace-nowrap shadow transition">
+              Rilis Token Baru
+            </button>
+          </div>
+        </div>
+
+        <!-- Action Grid Peserta -->
+        <div class="grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-between gap-2.5">
+          <div class="text-xs font-bold text-slate-500">
+            Total Terdaftar: <span id="countTotalPeserta" class="text-brand-600">0</span> Siswa
+          </div>
+
+          <div class="grid grid-cols-2 sm:flex gap-2 col-span-2 sm:col-span-1">
+            <button onclick="downloadTemplatePeserta()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition">
+              <i class="fa-solid fa-download"></i> Template Siswa
+            </button>
+            <button onclick="openUploadPesertaModal()" class="px-3.5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-brand-600/20 transition">
+              <i class="fa-solid fa-user-plus"></i> Import Excel
+            </button>
+            <button onclick="generateAndPrintCards()" class="px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow transition col-span-2 sm:col-span-1">
+              <i class="fa-solid fa-id-card text-amber-400"></i> Cetak Kartu QR (A4)
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabel Monitoring Peserta Ujian -->
+        <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200/80 dark:border-slate-800 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 dark:bg-slate-800/60 uppercase font-extrabold text-slate-500 border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                  <th class="py-3.5 px-4 w-12 text-center">No</th>
+                  <th class="py-3.5 px-4 w-28">NISN</th>
+                  <th class="py-3.5 px-4">Nama Lengkap Siswa</th>
+                  <th class="py-3.5 px-4 w-16 text-center">Kelas</th>
+                  <th class="py-3.5 px-4 w-24 text-center">Token</th>
+                  <th class="py-3.5 px-4 w-32 text-center">Status Ujian</th>
+                  <th class="py-3.5 px-4 w-20 text-center">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyPeserta" class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                <!-- Injected by JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ===================================================================== -->
+      <!-- TAB 3: REKAPITULASI NILAI & CETAK -->
+      <!-- ===================================================================== -->
+      <div id="tabRekap" class="tab-content space-y-4 hidden">
+        
+        <!-- Metric Statistics Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+            <div class="text-[10px] uppercase font-bold text-slate-400">Total Peserta</div>
+            <div id="statTotal" class="text-2xl font-extrabold font-mono text-slate-900 dark:text-white mt-1">0</div>
+          </div>
+          <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+            <div class="text-[10px] uppercase font-bold text-slate-400">Rata-Rata Nilai</div>
+            <div id="statRataRata" class="text-2xl font-extrabold font-mono text-brand-600 mt-1">0</div>
+          </div>
+          <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+            <div class="text-[10px] uppercase font-bold text-slate-400">Nilai Tertinggi</div>
+            <div id="statTertinggi" class="text-2xl font-extrabold font-mono text-emerald-600 mt-1">0</div>
+          </div>
+          <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+            <div class="text-[10px] uppercase font-bold text-slate-400">Nilai Terendah</div>
+            <div id="statTerendah" class="text-2xl font-extrabold font-mono text-rose-600 mt-1">0</div>
+          </div>
+        </div>
+
+        <!-- Tombol Cetak Laporan Resmi -->
+        <div class="flex justify-between items-center">
+          <span class="text-xs font-bold text-slate-500">Daftar Hasil Asesmen Peserta</span>
+          <button onclick="printOfficialScoreReport()" class="px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow transition">
+            <i class="fa-solid fa-print text-amber-400"></i> Cetak Laporan Resmi (A4)
+          </button>
+        </div>
+
+        <!-- Tabel Rekap Nilai -->
+        <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200/80 dark:border-slate-800 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 dark:bg-slate-800/60 uppercase font-extrabold text-slate-500 border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                  <th class="py-3.5 px-4 w-12 text-center">Rank</th>
+                  <th class="py-3.5 px-4 w-28">NISN</th>
+                  <th class="py-3.5 px-4">Nama Siswa</th>
+                  <th class="py-3.5 px-4 w-16 text-center">Kelas</th>
+                  <th class="py-3.5 px-4 w-16 text-center">Benar</th>
+                  <th class="py-3.5 px-4 w-16 text-center">Salah</th>
+                  <th class="py-3.5 px-4 w-16 text-center">Kosong</th>
+                  <th class="py-3.5 px-4 w-20 text-center">Nilai</th>
+                  <th class="py-3.5 px-4 w-24 text-center">Ketuntasan</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyRekapNilai" class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                <!-- Injected by JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ===================================================================== -->
+      <!-- TAB 4: PENGATURAN KOP SURAT RESMI -->
+      <!-- ===================================================================== -->
+      <div id="tabKop" class="tab-content space-y-4 hidden max-w-2xl">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-200/80 dark:border-slate-800 space-y-4">
+          <h3 class="font-bold text-base text-slate-900 dark:text-white pb-3 border-b border-slate-100 dark:border-slate-800">
+            Konfigurasi Kop Surat & Penandatangan Laporan
+          </h3>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Nama Kepala Sekolah</label>
+            <input type="text" id="cfgKepsekNama" value="Drs. H. Sukarno, M.Pd." class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">NIP Kepala Sekolah</label>
+            <input type="text" id="cfgKepsekNip" value="196803151992031005" class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-mono">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Nama Proktor / Pengampu</label>
+            <input type="text" id="cfgProktorNama" value="Bambang Sudarsono, S.Pd." class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">NIP Proktor</label>
+            <input type="text" id="cfgProktorNip" value="198507122010011012" class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-mono">
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">KKM / KKTP</label>
+              <input type="number" id="cfgKkm" value="75" class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-mono font-bold">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Titimangsa Kota</label>
+              <input type="text" id="cfgKota" value="Ambulu" class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold">
+            </div>
+          </div>
+
+          <button onclick="saveKopConfig()" class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-xs shadow-lg shadow-brand-600/30 transition">
+            Simpan Konfigurasi Kop
+          </button>
+        </div>
+      </div>
+
+    </main>
+
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- AREA CETAK FORMAL: DIGUNAKAN OLEH WINDOW.PRINT() -->
+  <!-- ========================================================================= -->
+  <div id="printContainer" class="hidden"></div>
+
+  <!-- ========================================================================= -->
+  <!-- JAVASCRIPT PROKTOR LOGIC -->
+  <!-- ========================================================================= -->
+  <script>
+    const PROKTOR_STATE = {
+      apiEndpoint: '/api/gas',
+      proktor: null,
+      bankSoal: [],
+      pesertaList: [],
+      rekapNilai: [],
+      activeToken: 'TKA26',
+      tempParsedSoal: [],
+      tempParsedPeserta: [],
+      configKop: {
+        kepsekNama: 'Drs. H. Sukarno, M.Pd.',
+        kepsekNip: '196803151992031005',
+        proktorNama: 'Bambang Sudarsono, S.Pd.',
+        proktorNip: '198507122010011012',
+        kkm: 75,
+        kota: 'Ambulu'
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadSavedConfig();
+      checkProktorSession();
+    });
+
+    function loadSavedConfig() {
+      const saved = localStorage.getItem('proktor_kop_config');
+      if (saved) {
+        try {
+          PROKTOR_STATE.configKop = Object.assign(PROKTOR_STATE.configKop, JSON.parse(saved));
+          document.getElementById('cfgKepsekNama').value = PROKTOR_STATE.configKop.kepsekNama;
+          document.getElementById('cfgKepsekNip').value = PROKTOR_STATE.configKop.kepsekNip;
+          document.getElementById('cfgProktorNama').value = PROKTOR_STATE.configKop.proktorNama;
+          document.getElementById('cfgProktorNip').value = PROKTOR_STATE.configKop.proktorNip;
+          document.getElementById('cfgKkm').value = PROKTOR_STATE.configKop.kkm;
+          document.getElementById('cfgKota').value = PROKTOR_STATE.configKop.kota;
+        } catch(e) {}
+      }
+    }
+
+    function saveKopConfig() {
+      PROKTOR_STATE.configKop = {
+        kepsekNama: document.getElementById('cfgKepsekNama').value,
+        kepsekNip: document.getElementById('cfgKepsekNip').value,
+        proktorNama: document.getElementById('cfgProktorNama').value,
+        proktorNip: document.getElementById('cfgProktorNip').value,
+        kkm: Number(document.getElementById('cfgKkm').value) || 75,
+        kota: document.getElementById('cfgKota').value || 'Ambulu'
+      };
+      localStorage.setItem('proktor_kop_config', JSON.stringify(PROKTOR_STATE.configKop));
+      showToast("Konfigurasi Kop Surat tersimpan!", "info");
+    }
+
+    function checkProktorSession() {
+      const session = localStorage.getItem('proktor_active_session');
+      if (session) {
+        try {
+          PROKTOR_STATE.proktor = JSON.parse(session);
+          showDashboardView();
+          refreshProktorData();
+        } catch(e) {
+          localStorage.removeItem('proktor_active_session');
+        }
+      }
+    }
+
+    async function handleProktorLogin(e) {
+      e.preventDefault();
+      const npsn = document.getElementById('proktorNpsn').value;
+      const kodeUnik = document.getElementById('proktorKodeUnik').value.trim();
+      const pin = document.getElementById('proktorPin').value.trim();
+
+      const btn = document.getElementById('btnProktorLogin');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Memverifikasi...`;
+
+      try {
+        const res = await fetch(PROKTOR_STATE.apiEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'proktorLogin',
+            payload: { npsn, kodeUnik, pin }
+          })
+        });
+
+        const data = await res.json();
+
+        if (data.success && data.proktor) {
+          PROKTOR_STATE.proktor = data.proktor;
+          localStorage.setItem('proktor_active_session', JSON.stringify(data.proktor));
+          showToast("Selamat datang, " + data.proktor.nama, "info");
+          showDashboardView();
+          refreshProktorData();
+        } else {
+          showToast(data.message || "Login gagal.", "error");
+        }
+      } catch (err) {
+        console.warn("Backend belum aktif. Menggunakan Mode Simulasi Proktor Offline.");
+        PROKTOR_STATE.proktor = {
+          idProktor: "PROK-SIMULASI",
+          nama: "Bambang Sudarsono, S.Pd.",
+          nip: "198507122010011012",
+          sekolah: "SDN Sumberejo 04",
+          npsn: npsn
+        };
+        localStorage.setItem('proktor_active_session', JSON.stringify(PROKTOR_STATE.proktor));
+        showDashboardView();
+        loadDummyDataOffline();
+        showToast("Terhubung dalam Mode Simulasi Proktor Offline", "info");
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span>Masuk Panel Proktor</span> <i class="fa-solid fa-arrow-right"></i>`;
+      }
+    }
+
+    function showDashboardView() {
+      document.getElementById('viewProktorLogin').classList.add('hidden');
+      document.getElementById('viewProktorDashboard').classList.remove('hidden');
+
+      document.getElementById('dashSchoolName').innerText = PROKTOR_STATE.proktor.sekolah;
+      document.getElementById('dashProctorName').innerText = PROKTOR_STATE.proktor.nama;
+    }
+
+    function logoutProktor() {
+      localStorage.removeItem('proktor_active_session');
+      window.location.reload();
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-brand-50', 'dark:bg-brand-950/60', 'text-brand-600');
+        btn.classList.add('text-slate-500');
+      });
+
+      document.getElementById(tabId).classList.remove('hidden');
+      const activeBtn = document.getElementById('tabBtn_' + tabId.replace('tab', '').toLowerCase());
+      if (activeBtn) {
+        activeBtn.classList.remove('text-slate-500');
+        activeBtn.classList.add('bg-brand-50', 'dark:bg-brand-950/60', 'text-brand-600');
+      }
+    }
+
+    async function refreshProktorData() {
+      const icon = document.getElementById('syncIcon');
+      if (icon) icon.classList.add('fa-spin');
+
+      await Promise.all([
+        loadBankSoal(),
+        loadPesertaList(),
+        loadRekapNilai()
+      ]);
+
+      if (icon) icon.classList.remove('fa-spin');
+      showToast("Data sinkron dengan cloud.", "info");
+    }
+
+    /**
+     * BANK SOAL LOGIC
+     */
+    async function loadBankSoal() {
+      const paket = document.getElementById('filterPaketSoal').value;
+      try {
+        const res = await fetch(PROKTOR_STATE.apiEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'proktorGetSoalList',
+            payload: { npsn: PROKTOR_STATE.proktor.npsn, paket }
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          PROKTOR_STATE.bankSoal = data.data || [];
+          renderBankSoalTable();
+        }
+      } catch(e) {
+        loadDummyDataOffline();
+      }
+    }
+
+    function renderBankSoalTable() {
+      const tbody = document.getElementById('tbodyBankSoal');
+      tbody.innerHTML = '';
+
+      if (PROKTOR_STATE.bankSoal.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400">Belum ada soal pada paket ini. Silakan import dari Excel.</td></tr>`;
+        return;
+      }
+
+      PROKTOR_STATE.bankSoal.forEach((s, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition";
+        tr.innerHTML = `
+          <td class="py-3 px-4 text-center font-bold font-mono">${idx + 1}</td>
+          <td class="py-3 px-4 font-mono font-semibold text-[11px] text-slate-500">${s.idSoal}<br><span class="text-brand-600 font-bold">${s.paket}</span></td>
+          <td class="py-3 px-4">
+            <div class="font-medium text-slate-900 dark:text-white line-clamp-2">${s.pertanyaan}</div>
+            <div class="text-[11px] text-slate-400 mt-1 flex flex-wrap gap-2">
+              <span><strong>A:</strong> ${s.opsiA}</span> | <span><strong>B:</strong> ${s.opsiB}</span> | <span><strong>C:</strong> ${s.opsiC}</span> | <span><strong>D:</strong> ${s.opsiD}</span>
+            </div>
+          </td>
+          <td class="py-3 px-4 text-center">
+            <span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold rounded-lg">${s.kunci}</span>
+          </td>
+          <td class="py-3 px-4 text-center font-mono font-bold">${s.bobot || 1}</td>
+          <td class="py-3 px-4 text-center">
+            <button onclick="deleteSoal('${s.idSoal}')" class="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function deleteSoal(idSoal) {
+      if (!confirm("Hapus soal ini dari bank soal?")) return;
+      try {
+        const res = await fetch(PROKTOR_STATE.apiEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'proktorDeleteSoal',
+            payload: { npsn: PROKTOR_STATE.proktor.npsn, idSoal }
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast("Soal berhasil dihapus.", "info");
+          loadBankSoal();
+        }
+      } catch(e) {
+        PROKTOR_STATE.bankSoal = PROKTOR_STATE.bankSoal.filter(s => s.idSoal !== idSoal);
+        renderBankSoalTable();
+        showToast("Soal dihapus (mode simulasi).", "info");
+      }
+    }
+
+    /**
+     * EXCEL SOAL IMPORT & EXPORT
+     */
+    function openUploadSoalModal() {
+      document.getElementById('modalUploadSoal').classList.remove('hidden');
+    }
+    function closeUploadSoalModal() {
+      document.getElementById('modalUploadSoal').classList.add('hidden');
+    }
+
+    function downloadTemplateSoal() {
+      const ws_data = [
+        ["No", "Materi", "Pertanyaan", "GambarURL", "OpsiA", "OpsiB", "OpsiC", "OpsiD", "KunciJawaban", "Bobot", "Pembahasan"],
+        [1, "Literasi & Numerasi", "Pak Rudi memiliki sebidang tanah berbentuk persegi panjang dengan panjang 24 meter dan lebar 15 meter. Berapakah luas tanah Pak Rudi?", "", "360 m²", "380 m²", "390 m²", "400 m²", "A", 1, "Luas = 24 x 15 = 360 m²"],
+        [2, "Literasi & Numerasi", "Sungai Bedadung mengalir membelah Kabupaten Jember. Pokok pikiran paragraf adalah...", "", "Pencemaran sungai", "Manfaat Sungai Bedadung", "Petani enggan bertani", "Banjir tahunan", "B", 1, "Manfaat sungai untuk irigasi."]
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Template_Soal");
+      XLSX.writeFile(wb, "Template_Soal_TKA_SD.xlsx");
+    }
+
+    function handleFileSoalSelected(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+        if (jsonData.length <= 1) {
+          showToast("File Excel tidak berisi data baris soal.", "error");
+          return;
+        }
+
+        const rows = jsonData.slice(1);
+        PROKTOR_STATE.tempParsedSoal = rows.filter(r => r[2]).map(r => ({
+          pertanyaan: r[2],
+          gambarUrl: r[3] || '',
+          opsiA: String(r[4] || ''),
+          opsiB: String(r[5] || ''),
+          opsiC: String(r[6] || ''),
+          opsiD: String(r[7] || ''),
+          kunci: String(r[8] || 'A').trim().toUpperCase(),
+          bobot: Number(r[9]) || 1,
+          pembahasan: String(r[10] || '')
+        }));
+
+        const previewInfo = document.getElementById('previewUploadSoalInfo');
+        previewInfo.innerHTML = `<strong>Siap Diimport:</strong> Terdeteksi <strong>${PROKTOR_STATE.tempParsedSoal.length}</strong> butir soal valid.`;
+        previewInfo.classList.remove('hidden');
+
+        document.getElementById('btnProcessUploadSoal').disabled = false;
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    async function executeUploadSoal() {
+      const paket = document.getElementById('uploadTargetPaket').value;
+      const btn = document.getElementById('btnProcessUploadSoal');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Menyimpan...`;
+
+      try {
+        const res = await fetch(PROKTOR_STATE.apiEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'proktorSaveSoalBatch',
+            payload: {
+              npsn: PROKTOR_STATE.proktor.npsn,
+              paket: paket,
+              mapel: "Literasi & Numerasi TKA SD",
+              soalList: PROKTOR_STATE.tempParsedSoal
+            }
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, "info");
+          closeUploadSoalModal();
+          loadBankSoal();
+        }
+      } catch(e) {
+        PROKTOR_STATE.bankSoal.push(...PROKTOR_STATE.tempParsedSoal.map((s, i) => ({ ...s, idSoal: 'SOAL-LOKAL-' + (i+1), paket })));
+        renderBankSoalTable();
+        closeUploadSoalModal();
+        showToast("Soal berhasil disimpan (Mode Simulasi).", "info");
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-upload"></i> Simpan ke Server`;
+      }
+    }
+
+    /**
+     * PESERTA LOGIC
+     */
+    async function loadPesertaList() {
+      try {
+        const res = await fetch(PROKTOR_STATE.apiEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'proktorGetPesertaList',
+            payload: { npsn: PROKTOR_STATE.proktor.npsn }
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          PROKTOR_STATE.pesertaList = data.data || [];
+          renderPesertaTable();
+        }
+      } catch(e) {
+        loadDummyDataOffline();
+      }
+    }
+
+    function renderPesertaTable() {
+      const tbody = document.getElementById('tbodyPeserta');
+      tbody.innerHTML = '';
+
+      document.getElementById('countTotalPeserta').innerText = PROKTOR_STATE.pesertaList.length;
+
+      if (PROKTOR_STATE.pesertaList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400">Belum ada siswa terdaftar. Silakan import dari Excel.</td></tr>`;
+        return;
+      }
+
+      PROKTOR_STATE.pesertaList.forEach((p, idx) => {
+        let badgeColor = "bg-slate-100 text-slate-700";
+        let statusLabel = "Belum Mulai";
+
+        if (p.statusUjian === "SEDANG_MENGERJAKAN") {
+          badgeColor = "bg-amber-100 text-amber-800 font-bold animate-pulse";
+          statusLabel = "Mengerjakan";
+        } else if (p.statusUjian === "SELESAI") {
+          badgeColor = "bg-emerald-100 text-emerald-800 font-bold";
+          statusLabel = "Selesai";
+        }
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition";
+        tr.innerHTML = `
+          <td class="py-3 px-4 text-center font-bold font-mono">${idx + 1}</td>
+          <td class="py-3 px-4 font-mono font-semibold">${p.nisn}</td>
+          <td class="py-3 px-4 font-bold text-slate-900 dark:text-white">${p.nama}</td>
+          <td class="py-3 px-4 text-center font-semibold">${p.kelas}</td>
+          <td class="py-3 px-4 text-center font-mono font-bold text-brand-600">${p.tokenUjian || 'TKA26'}</td>
+          <td class="py-3 px-4 text-center">
+            <span class="px-2.5 py-1 rounded-full text-[10px] ${badgeColor}">${statusLabel}</span>
+          </td>
+          <td class="py-3 px-4 text-center">
+            <button onclick="resetSiswaStatus('${p.nisn}')" title="Reset Ujian" class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg text-[10px] font-bold">
+              <i class="fa-solid fa-arrows-rotate"></i> Reset
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function resetSiswaStatus(nisn) {
+      if (!confirm("Reset status siswa ini agar dapat masuk ujian kembali?")) return;
+      try {
+        const res = await fetch(PROKTOR_STATE.apiEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'proktorResetSiswa',
+            payload: { npsn: PROKTOR_STATE.proktor.npsn, nisn }
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, "info");
+          loadPesertaList();
+        }
+      } catch(e) {
+        const t = PROKTOR_STATE.pesertaList.find(p => p.nisn === nisn);
+        if (t) t.statusUjian = "BELUM_MULAI";
+        renderPesertaTable();
+        showToast("Status siswa di-reset (mode simulasi).", "info");
+      }
+    }
+
+    function openUploadPesertaModal() {
+      document.getElementById('modalUploadPeserta').classList.remove('hidden');
+    }
+    function closeUploadPesertaModal() {
+      document.getElementById('modalUploadPeserta').classList.add('hidden');
+    }
+
+    function downloadTemplatePeserta() {
+      const ws_data = [
+        ["NISN", "Nama", "Kelas", "TokenUjian"],
+        ["0123456789", "Ahmad Fauzi", "VI-A", "TKA26"],
+        ["0123456790", "Siti Aisyah", "VI-A", "TKA26"],
+        ["0123456791", "Budi Santoso", "VI-B", "TKA26"]
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Template_Peserta");
+      XLSX.writeFile(wb, "Template_Peserta_TKA_SD.xlsx");
+    }
+
+    function handleFilePesertaSelected(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+        const rows = jsonData.slice(1);
+        PROKTOR_STATE.tempParsedPeserta = rows.filter(r => r[0]).map(r => ({
+          nisn: String(r[0]).trim(),
+          nama: String(r[1] || 'Siswa'),
+          kelas: String(r[2] || 'VI'),
+          tokenUjian: String(r[3] || PROKTOR_STATE.activeToken).trim().toUpperCase()
+        }));
+
+        const previewInfo = document.getElementById('previewUploadPesertaInfo');
+        previewInfo.innerHTML = `<strong>Siap Diimport:</strong> Terdeteksi <strong>${PROKTOR_STATE.tempParsedPeserta.length}</strong> peserta valid.`;
+        previewInfo.classList.remove('hidden');
+
+        document.getElementById('btnProcessUploadPeserta').disabled = false;
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    async function executeUploadPeserta() {
+      const btn = document.getElementById('btnProcessUploadPeserta');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Menyimpan...`;
+
+      try {
+        const res = await fetch(PROKTOR_STATE.apiEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'proktorSavePesertaBatch',
+            payload: {
+              npsn: PROKTOR_STATE.proktor.npsn,
+              pesertaList: PROKTOR_STATE.tempParsedPeserta
+            }
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, "info");
+          closeUploadPesertaModal();
+          loadPesertaList();
+        }
+      } catch(e) {
+        PROKTOR_STATE.pesertaList = PROKTOR_STATE.tempParsedPeserta.map(p => ({ ...p, statusUjian: 'BELUM_MULAI' }));
+        renderPesertaTable();
+        closeUploadPesertaModal();
+        showToast("Peserta berhasil disimpan (Mode Simulasi).", "info");
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-upload"></i> Simpan Peserta`;
+      }
+    }
+
+    function updateActiveToken() {
+      const val = document.getElementById('inputNewToken').value.trim().toUpperCase();
+      if (!val) {
+        showToast("Masukkan token baru terlebih dahulu.", "error");
+        return;
+      }
+      PROKTOR_STATE.activeToken = val;
+      document.getElementById('displayActiveToken').innerText = val;
+      PROKTOR_STATE.pesertaList.forEach(p => p.tokenUjian = val);
+      renderPesertaTable();
+      showToast("Token aktif diubah menjadi: " + val, "info");
+      document.getElementById('inputNewToken').value = '';
+    }
+
+    /**
+     * GENERATOR CETAK 8 KARTU QR PER A4 LANDSCAPE
+     */
+    function generateAndPrintCards() {
+      if (PROKTOR_STATE.pesertaList.length === 0) {
+        showToast("Belum ada data peserta untuk dicetak.", "error");
+        return;
+      }
+
+      const printContainer = document.getElementById('printContainer');
+      printContainer.className = "print-landscape p-4 bg-white";
+      printContainer.innerHTML = '';
+
+      let html = `
+        <div class="grid grid-cols-4 gap-3 p-2 bg-white" style="grid-template-columns: repeat(4, 1fr);">
+      `;
+
+      PROKTOR_STATE.pesertaList.forEach((p, idx) => {
+        const qrPayload = `${p.nisn}|${p.tokenUjian || 'TKA26'}`;
+        const qrId = `qr_card_${idx}`;
+
+        html += `
+          <div class="card-cr80 border border-dashed border-slate-400 p-2.5 rounded-xl flex flex-col justify-between text-center bg-white" style="page-break-inside: avoid; height: 95mm;">
+            <div>
+              <div class="text-[9px] font-extrabold uppercase tracking-tight text-brand-700 leading-tight">
+                DINAS PENDIDIKAN KAB. JEMBER<br>KOORWIL AMBULU
+              </div>
+              <div class="text-[8px] font-bold text-slate-600 border-b border-slate-300 pb-1 mb-1">
+                ${PROKTOR_STATE.proktor.sekolah}
+              </div>
+              <div class="text-[10px] font-extrabold text-slate-800 uppercase tracking-wider my-0.5">
+                KARTU PESERTA TKA SD
+              </div>
+            </div>
+
+            <!-- QR Code Box -->
+            <div class="my-1 flex items-center justify-center">
+              <div id="${qrId}" class="p-1 border border-slate-200 rounded-lg inline-block"></div>
+            </div>
+
+            <div class="text-left text-[9px] space-y-0.5 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+              <div><span class="text-slate-500">NISN:</span> <strong class="font-mono text-slate-900">${p.nisn}</strong></div>
+              <div class="truncate"><span class="text-slate-500">Nama:</span> <strong class="text-slate-900">${p.nama}</strong></div>
+              <div><span class="text-slate-500">Kelas:</span> <strong>${p.kelas}</strong> | Token: <strong class="font-mono text-brand-600">${p.tokenUjian || 'TKA26'}</strong></div>
+            </div>
+
+            <div class="text-[7px] text-slate-400 mt-1">
+              Pindai QR saat login CBT
+            </div>
+          </div>
+        `;
+      });
+
+      html += `</div>`;
+      printContainer.innerHTML = html;
+
+      // Generate actual QR Codes with qrcodejs
+      PROKTOR_STATE.pesertaList.forEach((p, idx) => {
+        const qrEl = document.getElementById(`qr_card_${idx}`);
+        if (qrEl) {
+          new QRCode(qrEl, {
+            text: `${p.nisn}|${p.tokenUjian || 'TKA26'}`,
+            width: 90,
+            height: 90,
+            correctLevel: QRCode.CorrectLevel.M
+          });
+        }
+      });
+
+      setTimeout(() => {
+        window.print();
+      }, 500);
+    }
+
+    /**
+     * REKAPITULASI NILAI & CETAK LAPORAN RESMI
+     */
+    async function loadRekapNilai() {
+      try {
+        const res = await fetch(PROKTOR_STATE.apiEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'proktorGetRekapNilai',
+            payload: { npsn: PROKTOR_STATE.proktor.npsn }
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          PROKTOR_STATE.rekapNilai = data.data || [];
+          if (data.statistik) {
+            document.getElementById('statTotal').innerText = data.statistik.totalPeserta;
+            document.getElementById('statRataRata').innerText = data.statistik.rataRata;
+            document.getElementById('statTertinggi').innerText = data.statistik.tertinggi;
+            document.getElementById('statTerendah').innerText = data.statistik.terendah;
+          }
+          renderRekapTable();
+        }
+      } catch(e) {
+        loadDummyDataOffline();
+      }
+    }
+
+    function renderRekapTable() {
+      const tbody = document.getElementById('tbodyRekapNilai');
+      tbody.innerHTML = '';
+
+      if (PROKTOR_STATE.rekapNilai.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center py-8 text-slate-400">Belum ada nilai yang masuk. Menunggu peserta menyelesaikan ujian.</td></tr>`;
+        return;
+      }
+
+      // Sort by score descending
+      const sorted = [...PROKTOR_STATE.rekapNilai].sort((a,b) => (b.nilaiAkhir || 0) - (a.nilaiAkhir || 0));
+
+      sorted.forEach((n, idx) => {
+        const score = Number(n.nilaiAkhir) || 0;
+        const isTuntas = score >= PROKTOR_STATE.configKop.kkm;
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition";
+        tr.innerHTML = `
+          <td class="py-3 px-4 text-center font-bold font-mono">${idx + 1}</td>
+          <td class="py-3 px-4 font-mono font-semibold">${n.nisn}</td>
+          <td class="py-3 px-4 font-bold text-slate-900 dark:text-white">${n.nama}</td>
+          <td class="py-3 px-4 text-center font-semibold">${n.kelas}</td>
+          <td class="py-3 px-4 text-center font-mono text-emerald-600 font-bold">${n.jumlahBenar || 0}</td>
+          <td class="py-3 px-4 text-center font-mono text-rose-600 font-bold">${n.jumlahSalah || 0}</td>
+          <td class="py-3 px-4 text-center font-mono text-slate-400">${n.jumlahKosong || 0}</td>
+          <td class="py-3 px-4 text-center font-mono font-extrabold text-sm ${score >= 75 ? 'text-emerald-600' : 'text-amber-600'}">${score}</td>
+          <td class="py-3 px-4 text-center">
+            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${isTuntas ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+              ${isTuntas ? 'Tuntas' : 'Belum Tuntas'}
+            </span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    /**
+     * ENGINE CETAK LAPORAN RESMI (A4 BER-KOP SURAT)
+     */
+    function printOfficialScoreReport() {
+      if (PROKTOR_STATE.rekapNilai.length === 0) {
+        showToast("Belum ada data nilai yang siap dicetak.", "error");
+        return;
+      }
+
+      const cfg = PROKTOR_STATE.configKop;
+      const printContainer = document.getElementById('printContainer');
+      printContainer.className = "p-8 bg-white text-black font-sans";
+
+      const sorted = [...PROKTOR_STATE.rekapNilai].sort((a,b) => (b.nilaiAkhir || 0) - (a.nilaiAkhir || 0));
+      const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+      let rowsHtml = '';
+      sorted.forEach((n, idx) => {
+        const score = Number(n.nilaiAkhir) || 0;
+        const isTuntas = score >= cfg.kkm;
+        rowsHtml += `
+          <tr style="border-bottom: 1px solid #ddd;">
+            <td style="padding: 6px; text-align: center;">${idx + 1}</td>
+            <td style="padding: 6px; font-family: monospace;">${n.nisn}</td>
+            <td style="padding: 6px; font-weight: bold;">${n.nama}</td>
+            <td style="padding: 6px; text-align: center;">${n.kelas}</td>
+            <td style="padding: 6px; text-align: center;">${n.jumlahBenar}</td>
+            <td style="padding: 6px; text-align: center;">${n.jumlahSalah}</td>
+            <td style="padding: 6px; text-align: center;">${n.jumlahKosong}</td>
+            <td style="padding: 6px; text-align: center; font-weight: bold;">${score}</td>
+            <td style="padding: 6px; text-align: center;">${isTuntas ? 'TUNTAS' : 'BELUM'}</td>
+          </tr>
+        `;
+      });
+
+      printContainer.innerHTML = `
+        <div style="font-family: Arial, sans-serif; color: #000; line-height: 1.3;">
+          
+          <!-- KOP SURAT RESMI -->
+          <div style="text-align: center; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 14px;">
+            <div style="font-size: 14px; font-weight: bold; letter-spacing: 1px;">PEMERINTAH KABUPATEN JEMBER</div>
+            <div style="font-size: 15px; font-weight: bold; letter-spacing: 1px;">DINAS PENDIDIKAN</div>
+            <div style="font-size: 13px; font-weight: bold;">KOORDINATOR WILAYAH BIDANG PENDIDIKAN KECAMATAN AMBULU</div>
+            <div style="font-size: 16px; font-weight: 800; text-transform: uppercase; margin-top: 2px;">
+              SATUAN PENDIDIKAN ${PROKTOR_STATE.proktor.sekolah}
+            </div>
+            <div style="font-size: 10px; color: #444; margin-top: 2px;">
+              Kecamatan Ambulu, Kabupaten Jember, Jawa Timur • NPSN: ${PROKTOR_STATE.proktor.npsn}
+            </div>
+          </div>
+
+          <!-- JUDUL LAPORAN -->
+          <div style="text-align: center; margin-bottom: 16px;">
+            <div style="font-size: 13px; font-weight: bold; text-decoration: underline; text-transform: uppercase;">
+              REKAPITULASI HASIL TRY OUT TES KEMAMPUAN AKADEMIK (TKA) SD
+            </div>
+            <div style="font-size: 11px; margin-top: 3px;">
+              Tahun Ajaran 2026/2027 • Mata Pelajaran: Literasi & Numerasi (Paket A)
+            </div>
+          </div>
+
+          <!-- TABEL DATA NILAI -->
+          <table style="width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 24px;">
+            <thead>
+              <tr style="background: #f2f2f2; border-top: 1px solid #000; border-bottom: 1px solid #000;">
+                <th style="padding: 6px; width: 35px; text-align: center;">No</th>
+                <th style="padding: 6px; width: 85px;">NISN</th>
+                <th style="padding: 6px; text-align: left;">Nama Peserta</th>
+                <th style="padding: 6px; width: 45px; text-align: center;">Kelas</th>
+                <th style="padding: 6px; width: 45px; text-align: center;">Benar</th>
+                <th style="padding: 6px; width: 45px; text-align: center;">Salah</th>
+                <th style="padding: 6px; width: 45px; text-align: center;">Kosong</th>
+                <th style="padding: 6px; width: 55px; text-align: center;">Nilai</th>
+                <th style="padding: 6px; width: 65px; text-align: center;">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+
+          <!-- KOLOM TANDA TANGAN RESMI -->
+          <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 30px; page-break-inside: avoid;">
+            <div style="text-align: center; width: 220px;">
+              <div>Mengetahui,</div>
+              <div style="font-weight: bold;">Kepala ${PROKTOR_STATE.proktor.sekolah}</div>
+              <div style="height: 65px;"></div>
+              <div style="font-weight: bold; text-decoration: underline;">${cfg.kepsekNama}</div>
+              <div>NIP. ${cfg.kepsekNip}</div>
+            </div>
+
+            <div style="text-align: center; width: 220px;">
+              <div>${cfg.kota}, ${today}</div>
+              <div style="font-weight: bold;">Proktor / Pengampu Ujian</div>
+              <div style="height: 65px;"></div>
+              <div style="font-weight: bold; text-decoration: underline;">${cfg.proktorNama}</div>
+              <div>NIP. ${cfg.proktorNip}</div>
+            </div>
+          </div>
+
+        </div>
+      `;
+
+      setTimeout(() => {
+        window.print();
+      }, 300);
+    }
+
+    /**
+     * FALLBACK SIMULASI OFFLINE
+     */
+    function loadDummyDataOffline() {
+      PROKTOR_STATE.bankSoal = [
+        { idSoal: "SOAL-001", paket: "PAKET-A", pertanyaan: "Luas tanah panjang 24m dan lebar 15m adalah...", opsiA: "360 m²", opsiB: "380 m²", opsiC: "390 m²", opsiD: "400 m²", kunci: "A", bobot: 1 },
+        { idSoal: "SOAL-002", paket: "PAKET-A", pertanyaan: "Pokok pikiran manfaat Sungai Bedadung...", opsiA: "Pencemaran", opsiB: "Manfaat irigasi sawah", opsiC: "Banjir", opsiD: "Kekeringan", kunci: "B", bobot: 1 },
+        { idSoal: "SOAL-003", paket: "PAKET-A", pertanyaan: "(144:12) + (15x6) - 25 = ...", opsiA: "72", opsiB: "77", opsiC: "87", opsiD: "92", kunci: "B", bobot: 1 }
+      ];
+      PROKTOR_STATE.pesertaList = [
+        { nisn: "0123456789", nama: "Ahmad Fauzi", kelas: "VI-A", tokenUjian: "TKA26", statusUjian: "SELESAI" },
+        { nisn: "0123456790", nama: "Siti Aisyah", kelas: "VI-A", tokenUjian: "TKA26", statusUjian: "SEDANG_MENGERJAKAN" },
+        { nisn: "0123456791", nama: "Budi Santoso", kelas: "VI-B", tokenUjian: "TKA26", statusUjian: "BELUM_MULAI" }
+      ];
+      PROKTOR_STATE.rekapNilai = [
+        { nisn: "0123456789", nama: "Ahmad Fauzi", kelas: "VI-A", jumlahBenar: 3, jumlahSalah: 0, jumlahKosong: 0, nilaiAkhir: 100 }
+      ];
+
+      renderBankSoalTable();
+      renderPesertaTable();
+      renderRekapTable();
+
+      document.getElementById('statTotal').innerText = "1";
+      document.getElementById('statRataRata').innerText = "100";
+      document.getElementById('statTertinggi').innerText = "100";
+      document.getElementById('statTerendah').innerText = "100";
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      const bg = type === 'error' ? 'bg-rose-600 text-white' : 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900';
+      const icon = type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
+
+      toast.className = `${bg} px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs font-semibold pointer-events-auto transition-all transform duration-300`;
+      toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
+
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+  </script>
+
+</body>
+</html>

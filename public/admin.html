@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Pengawas Koorwil - SiSiswa TKA SD</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#EEF2FF',
+              600: '#4F46E5',
+              700: '#4338CA'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="h-full bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans antialiased flex flex-col justify-between">
+
+  <!-- Header -->
+  <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-brand-600 text-white flex items-center justify-center font-bold text-lg shadow-md shadow-brand-600/30">
+          <i class="fa-solid fa-building-columns"></i>
+        </div>
+        <div>
+          <h1 class="text-base font-extrabold text-slate-900 dark:text-white leading-tight">Panel Pengawas Koorwil Ambulu</h1>
+          <p class="text-xs text-slate-500">Monitoring 14 SDN Asesmen Try Out TKA SD</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <a href="index.html" class="text-xs font-semibold text-slate-500 hover:text-brand-600 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-graduation-cap"></i> Portal Siswa
+        </a>
+        <a href="proktor.html" class="text-xs font-semibold text-slate-500 hover:text-brand-600 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-user-shield"></i> Portal Proktor
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+    
+    <!-- Top Stats -->
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      <div class="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+        <div class="text-xs uppercase font-bold text-slate-400">Total Lembaga SD</div>
+        <div class="text-3xl font-extrabold font-mono text-slate-900 dark:text-white mt-1">14 <span class="text-xs font-sans text-slate-500 font-normal">SDN</span></div>
+        <div class="text-[11px] text-emerald-600 mt-2 font-semibold"><i class="fa-solid fa-circle-check"></i> Seluruhnya Terverifikasi</div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+        <div class="text-xs uppercase font-bold text-slate-400">Target Siswa Kelas VI</div>
+        <div class="text-3xl font-extrabold font-mono text-brand-600 mt-1">420 <span class="text-xs font-sans text-slate-500 font-normal">Siswa</span></div>
+        <div class="text-[11px] text-slate-500 mt-2">Kecamatan Ambulu</div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+        <div class="text-xs uppercase font-bold text-slate-400">Mata Asesmen Aktif</div>
+        <div class="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">Literasi & Numerasi</div>
+        <div class="text-[11px] text-brand-600 mt-2 font-semibold">Standar TKA SD 2026</div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+        <div class="text-xs uppercase font-bold text-slate-400">Status Server Database</div>
+        <div class="text-2xl font-extrabold text-emerald-600 mt-1">Online (Aktif)</div>
+        <div class="text-[11px] text-slate-500 mt-2">Zero-Maintenance Cloud</div>
+      </div>
+    </div>
+
+    <!-- Directory Table of 14 Schools -->
+    <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-200/80 dark:border-slate-800 space-y-4">
+      <div class="flex justify-between items-center">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 dark:text-white">Direktori 14 Satuan Pendidikan Wilayah Kerja Ambulu</h2>
+          <p class="text-xs text-slate-500">Daftar NPSN dan kode unik lembaga untuk akses login proktor sekolah.</p>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50 dark:bg-slate-800/60 uppercase font-extrabold text-slate-500 border-b border-slate-200 dark:border-slate-800">
+            <tr>
+              <th class="py-3 px-4 w-12 text-center">No</th>
+              <th class="py-3 px-4 w-32">NPSN</th>
+              <th class="py-3 px-4">Nama Satuan Pendidikan</th>
+              <th class="py-3 px-4 w-36">Kode Unik Lembaga</th>
+              <th class="py-3 px-4 w-32 text-center">Status CBT</th>
+              <th class="py-3 px-4 w-28 text-center">Akses Proktor</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+            <tr><td class="py-3 px-4 text-center font-bold">1</td><td class="py-3 px-4 font-mono font-bold">20524058</td><td class="py-3 px-4 font-bold text-slate-900 dark:text-white">SDN Sumberejo 04</td><td class="py-3 px-4 font-mono text-brand-600 font-bold">SMB04-3918</td><td class="py-3 px-4 text-center"><span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold rounded-full text-[10px]">Siap Ujian</span></td><td class="py-3 px-4 text-center"><a href="proktor.html" class="text-brand-600 font-bold hover:underline">Buka &rarr;</a></td></tr>
+            <tr><td class="py-3 px-4 text-center font-bold">2</td><td class="py-3 px-4 font-mono font-bold">20524059</td><td class="py-3 px-4 font-bold text-slate-900 dark:text-white">SDN Sumberejo 01</td><td class="py-3 px-4 font-mono text-brand-600 font-bold">SMB01-1122</td><td class="py-3 px-4 text-center"><span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold rounded-full text-[10px]">Siap Ujian</span></td><td class="py-3 px-4 text-center"><a href="proktor.html" class="text-brand-600 font-bold hover:underline">Buka &rarr;</a></td></tr>
+            <tr><td class="py-3 px-4 text-center font-bold">3</td><td class="py-3 px-4 font-mono font-bold">20524060</td><td class="py-3 px-4 font-bold text-slate-900 dark:text-white">SDN Sumberejo 02</td><td class="py-3 px-4 font-mono text-brand-600 font-bold">SMB02-3344</td><td class="py-3 px-4 text-center"><span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold rounded-full text-[10px]">Siap Ujian</span></td><td class="py-3 px-4 text-center"><a href="proktor.html" class="text-brand-600 font-bold hover:underline">Buka &rarr;</a></td></tr>
+            <tr><td class="py-3 px-4 text-center font-bold">4</td><td class="py-3 px-4 font-mono font-bold">20524061</td><td class="py-3 px-4 font-bold text-slate-900 dark:text-white">SDN Ambulu 01</td><td class="py-3 px-4 font-mono text-brand-600 font-bold">AMB01-5566</td><td class="py-3 px-4 text-center"><span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold rounded-full text-[10px]">Siap Ujian</span></td><td class="py-3 px-4 text-center"><a href="proktor.html" class="text-brand-600 font-bold hover:underline">Buka &rarr;</a></td></tr>
+            <tr><td class="py-3 px-4 text-center font-bold">5</td><td class="py-3 px-4 font-mono font-bold">20524062</td><td class="py-3 px-4 font-bold text-slate-900 dark:text-white">SDN Ambulu 02</td><td class="py-3 px-4 font-mono text-brand-600 font-bold">AMB02-7788</td><td class="py-3 px-4 text-center"><span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold rounded-full text-[10px]">Siap Ujian</span></td><td class="py-3 px-4 text-center"><a href="proktor.html" class="text-brand-600 font-bold hover:underline">Buka &rarr;</a></td></tr>
+            <tr><td class="py-3 px-4 text-center font-bold">6</td><td class="py-3 px-4 font-mono font-bold">20524063</td><td class="py-3 px-4 font-bold text-slate-900 dark:text-white">SDN Ambulu 03</td><td class="py-3 px-4 font-mono text-brand-600 font-bold">AMB03-9900</td><td class="py-3 px-4 text-center"><span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold rounded-full text-[10px]">Siap Ujian</span></td><td class="py-3 px-4 text-center"><a href="proktor.html" class="text-brand-600 font-bold hover:underline">Buka &rarr;</a></td></tr>
+            <tr><td class="py-3 px-4 text-center font-bold">7</td><td class="py-3 px-4 font-mono font-bold">20524064</td><td class="py-3 px-4 font-bold text-slate-900 dark:text-white">SDN Karanganyar 01</td><td class="py-3 px-4 font-mono text-brand-600 font-bold">KRG01-2233</td><td class="py-3 px-4 text-center"><span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold rounded-full text-[10px]">Siap Ujian</span></td><td class="py-3 px-4 text-center"><a href="proktor.html" class="text-brand-600 font-bold hover:underline">Buka &rarr;</a></td></tr>
+            <tr><td class="py-3 px-4 text-center font-bold">8</td><td class="py-3 px-4 font-mono font-bold">20524065</td><td class="py-3 px-4 font-bold text-slate-900 dark:text-white">SDN Karanganyar 02</td><td class="py-3 px-4 font-mono text-brand-600 font-bold">KRG02-4455</td><td class="py-3 px-4 text-center"><span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold rounded-full text-[10px]">Siap Ujian</span></td><td class="py-3 px-4 text-center"><a href="proktor.html" class="text-brand-600 font-bold hover:underline">Buka &rarr;</a></td></tr>
+            <tr><td class="py-3 px-4 text-center font-bold">9</td><td class="py-3 px-4 font-mono font-bold">20524066</td><td class="py-3 px-4 font-bold text-slate-900 dark:text-white">SDN Tegalsari 01</td><td class="py-3 px-4 font-mono text-brand-600 font-bold">TGL01-6677</td><td class="py-3 px-4 text-center"><span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold rounded-full text-[10px]">Siap Ujian</span></td><td class="py-3 px-4 text-center"><a href="proktor.html" class="text-brand-600 font-bold hover:underline">Buka &rarr;</a></td></tr>
+            <tr><td class="py-3 px-4 text-center font-bold">10</td><td class="py-3 px-4 font-mono font-bold">20524067</td><td class="py-3 px-4 font-bold text-slate-900 dark:text-white">SDN Tegalsari 02</td><td class="py-3 px-4 font-mono text-brand-600 font-bold">TGL02-8899</td><td class="py-3 px-4 text-center"><span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold rounded-full text-[10px]">Siap Ujian</span></td><td class="py-3 px-4 text-center"><a href="proktor.html" class="text-brand-600 font-bold hover:underline">Buka &rarr;</a></td></tr>
+            <tr><td class="py-3 px-4 text-center font-bold">11</td><td class="py-3 px-4 font-mono font-bold">20524068</td><td class="py-3 px-4 font-bold text-slate-900 dark:text-white">SDN Pontang 01</td><td class="py-3 px-4 font-mono text-brand-600 font-bold">PTG01-1234</td><td class="py-3 px-4 text-center"><span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold rounded-full text-[10px]">Siap Ujian</span></td><td class="py-3 px-4 text-center"><a href="proktor.html" class="text-brand-600 font-bold hover:underline">Buka &rarr;</a></td></tr>
+            <tr><td class="py-3 px-4 text-center font-bold">12</td><td class="py-3 px-4 font-mono font-bold">20524069</td><td class="py-3 px-4 font-bold text-slate-900 dark:text-white">SDN Pontang 02</td><td class="py-3 px-4 font-mono text-brand-600 font-bold">PTG02-5678</td><td class="py-3 px-4 text-center"><span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold rounded-full text-[10px]">Siap Ujian</span></td><td class="py-3 px-4 text-center"><a href="proktor.html" class="text-brand-600 font-bold hover:underline">Buka &rarr;</a></td></tr>
+            <tr><td class="py-3 px-4 text-center font-bold">13</td><td class="py-3 px-4 font-mono font-bold">20524070</td><td class="py-3 px-4 font-bold text-slate-900 dark:text-white">SDN Andongsari 01</td><td class="py-3 px-4 font-mono text-brand-600 font-bold">ADG01-9012</td><td class="py-3 px-4 text-center"><span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold rounded-full text-[10px]">Siap Ujian</span></td><td class="py-3 px-4 text-center"><a href="proktor.html" class="text-brand-600 font-bold hover:underline">Buka &rarr;</a></td></tr>
+            <tr><td class="py-3 px-4 text-center font-bold">14</td><td class="py-3 px-4 font-mono font-bold">20524071</td><td class="py-3 px-4 font-bold text-slate-900 dark:text-white">SDN Sabrang 01</td><td class="py-3 px-4 font-mono text-brand-600 font-bold">SBR01-3456</td><td class="py-3 px-4 text-center"><span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold rounded-full text-[10px]">Siap Ujian</span></td><td class="py-3 px-4 text-center"><a href="proktor.html" class="text-brand-600 font-bold hover:underline">Buka &rarr;</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 text-center text-xs text-slate-500">
+    SiSiswa TKA SD &bull; Koorwil Bidang Pendidikan Kecamatan Ambulu, Kabupaten Jember &bull; Zero-Maintenance System
+  </footer>
+
+</body>
+</html>
