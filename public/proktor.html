@@ -411,6 +411,7 @@
               <span id="dashProctorName">Bambang Sudarsono, S.Pd.</span>
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
               <span class="text-[11px] text-emerald-600 font-semibold">Online</span>
+              <span id="dashKodeUnikBadge" class="hidden sm:inline-block px-2 py-0.5 rounded-lg bg-brand-50 text-brand-700 font-mono font-bold text-[10px] border border-brand-200">PIN: -</span>
             </div>
           </div>
         </div>
@@ -953,6 +954,11 @@
 
       document.getElementById('dashSchoolName').innerText = PROKTOR_STATE.proktor.sekolah;
       document.getElementById('dashProctorName').innerText = PROKTOR_STATE.proktor.nama;
+      
+      const badge = document.getElementById('dashKodeUnikBadge');
+      if (badge && PROKTOR_STATE.proktor.kodeUnik) {
+        badge.innerText = "PIN Siswa: " + PROKTOR_STATE.proktor.kodeUnik;
+      }
     }
 
     function logoutProktor() {
@@ -1708,8 +1714,10 @@
         <div class="grid grid-cols-4 gap-3 p-2 bg-white" style="grid-template-columns: repeat(4, 1fr);">
       `;
 
+      const schoolKode = PROKTOR_STATE.proktor.kodeUnik || document.getElementById('proktorKodeUnik')?.value || 'SMB04-3918';
+
       PROKTOR_STATE.pesertaList.forEach((p, idx) => {
-        const qrPayload = `${p.nisn}|${p.tokenUjian || 'TKA26'}`;
+        const qrPayload = `${schoolKode}|${p.nisn}|${p.nama}`;
         const qrId = `qr_card_${idx}`;
 
         html += `
@@ -1752,7 +1760,7 @@
         const qrEl = document.getElementById(`qr_card_${idx}`);
         if (qrEl) {
           new QRCode(qrEl, {
-            text: `${p.nisn}|${p.tokenUjian || 'TKA26'}`,
+            text: `${schoolKode}|${p.nisn}|${p.nama}`,
             width: 90,
             height: 90,
             correctLevel: QRCode.CorrectLevel.M

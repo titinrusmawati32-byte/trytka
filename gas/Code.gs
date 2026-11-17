@@ -150,6 +150,9 @@ function doPost(e) {
       case "siswaSubmitUjian":
         response = siswaSubmitUjian(payload);
         break;
+      case "siswaGetPembahasan":
+        response = siswaGetPembahasan(payload);
+        break;
 
       default:
         response = { success: false, message: "Action handler belum diimplementasikan: " + action };
@@ -837,82 +840,162 @@ function proktorGetRekapNilai(payload) {
  */
 
 function siswaLoginAndGetSoal(payload) {
-  const { npsn, nisn, tokenUjian } = payload;
-  if (!npsn || !nisn || !tokenUjian) {
-    return { success: false, message: "NPSN Sekolah, NISN Siswa, dan Token Ujian wajib diisi." };
+  let { kodeUnik, npsn, nisn, nama, kelas, tokenUjian } = payload;
+  if (!nisn) {
+    return { success: false, message: "NISN Siswa wajib diisi." };
   }
 
   const ss = getSpreadsheet();
 
-  // 1. Cek Peserta
-  const pesertaSheet = getOrCreateSheet(ss, "Peserta_" + npsn, [
-    "nisn", "nama", "kelas", "tokenUjian", "statusUjian", "mulaiUjian", "selesaiUjian"
-  ]);
-  const pesertaList = sheetToObjects(pesertaSheet);
-  const siswa = pesertaList.find(p => String(p.nisn).trim() === String(nisn).trim());
+  // 1. Validasi / Resolusi Lembaga berdasarkan kodeUnik atau npsn
+  let sekolah = null;
+  const masterSheet = ss.getSheetByName("Master_Sekolah");
+  let daftarSekolah = masterSheet ? sheetToObjects(masterSheet) : MASTER_SEKOLAH_DEFAULT;
+  if (!daftarSekolah || daftarSekolah.length === 0) daftarSekolah = MASTER_SEKOLAH_DEFAULT;
 
-  if (!siswa) {
-    return { success: false, message: "NISN " + nisn + " belum terdaftar di sekolah ini. Hubungi proktor/guru kelas." };
+  if (kodeUnik) {
+    const cleanKode = String(kodeUnik).trim().toUpperCase();
+    sekolah = daftarSekolah.find(s => 
+      String(s.kodeUnik).trim().toUpperCase() === cleanKode || 
+      String(s.npsn).trim() === cleanKode
+    );
+  }
+  if (!sekolah && npsn) {
+    sekolah = daftarSekolah.find(s => String(s.npsn).trim() === String(npsn).trim());
   }
 
-  if (String(siswa.tokenUjian).trim().toUpperCase() !== String(tokenUjian).trim().toUpperCase()) {
-    return { success: false, message: "Token Ujian tidak valid untuk peserta ini." };
-  }
-
-  if (String(siswa.statusUjian) === "SELESAI") {
-    return {
-      success: false,
-      message: "Anda sudah menyelesaikan ujian ini sebelumnya. Konfirmasi ke proktor jika ingin remidi/reset."
+  if (!sekolah) {
+    return { 
+      success: false, 
+      message: "Kode Lembaga / PIN tidak valid. Pastikan Anda memasukkan kode unik lembaga yang benar." 
     };
   }
 
-  // 2. Ambil Soal Ujian (ANTI-LEAK: Kunci & Pembahasan DIHILANGKAN dari payload)
-  const soalSheet = ss.getSheetByName("Soal_" + npsn);
-  if (!soalSheet) {
-    return { success: false, message: "Bank soal untuk sekolah ini belum disiapkan oleh proktor." };
+  const targetNpsn = sekolah.npsn;
+  const namaSekolah = sekolah.namaSekolah;
+
+  // 2. Cek & Kelola Data Peserta di Peserta_{targetNpsn}
+  const pesertaSheet = getOrCreateSheet(ss, "Peserta_" + targetNpsn, [
+    "nisn", "nama", "kelas", "tokenUjian", "statusUjian", "mulaiUjian", "selesaiUjian"
+  ]);
+  const pesertaList = sheetToObjects(pesertaSheet);
+  let siswa = pesertaList.find(p => String(p.nisn).trim() === String(nisn).trim());
+
+  // Jika siswa belum ada di database, LAKUKAN REGISTRASI MANDIRI OTOMATIS
+  if (!siswa) {
+    if (!nama || String(nama).trim() === "") {
+      return { 
+        success: false, 
+        message: "Nama lengkap siswa wajib diisi untuk pencatatan pertama kali di database sekolah." 
+      };
+    }
+    const cleanNama = String(nama).trim().toUpperCase();
+    const cleanKelas = kelas ? String(kelas).trim() : "VI";
+    const cleanToken = tokenUjian ? String(tokenUjian).trim().toUpperCase() : "AUTO";
+    const waktuMulai = new Date().toISOString();
+
+    pesertaSheet.appendRow([
+      String(nisn).trim(),
+      cleanNama,
+      cleanKelas,
+      cleanToken,
+      "SEDANG_MENGERJAKAN",
+      waktuMulai,
+      ""
+    ]);
+
+    siswa = {
+      nisn: String(nisn).trim(),
+      nama: cleanNama,
+      kelas: cleanKelas,
+      tokenUjian: cleanToken,
+      statusUjian: "SEDANG_MENGERJAKAN",
+      mulaiUjian: waktuMulai
+    };
+  } else {
+    // Jika siswa sudah ada, perbarui nama/kelas jika diberikan
+    if (nama && (!siswa.nama || String(siswa.nama).trim() === "")) {
+      pesertaSheet.getRange(siswa._rowIndex, 2).setValue(String(nama).trim().toUpperCase());
+      siswa.nama = String(nama).trim().toUpperCase();
+    }
   }
 
-  const allSoal = sheetToObjects(soalSheet);
-  if (allSoal.length === 0) {
-    return { success: false, message: "Belum ada soal aktif yang tersedia di sistem." };
-  }
+  // Jika siswa SUDAH SELESAI mengerjakan ujian sebelumnya:
+  const isFinished = (String(siswa.statusUjian) === "SELESAI");
 
-  // Filter paket (default PAKET-A jika tidak dispesifikasikan)
+  // 3. Ambil Soal Ujian (ANTI-LEAK: Kunci & Pembahasan DIHILANGKAN untuk ujian aktif)
+  const soalSheet = ss.getSheetByName("Soal_" + targetNpsn);
+  let sanitizedSoalList = [];
   const targetPaket = "PAKET-A";
-  let filteredSoal = allSoal.filter(s => String(s.paket).toUpperCase() === targetPaket);
-  if (filteredSoal.length === 0) {
-    filteredSoal = allSoal; // Fallback ke seluruh soal jika paket tidak terpisah
+
+  if (soalSheet) {
+    const allSoal = sheetToObjects(soalSheet);
+    let filteredSoal = allSoal.filter(s => String(s.paket).toUpperCase() === targetPaket);
+    if (filteredSoal.length === 0) filteredSoal = allSoal;
+
+    sanitizedSoalList = filteredSoal.map((s, index) => ({
+      nomor: index + 1,
+      idSoal: String(s.idSoal),
+      mapel: s.mapel || "Literasi & Numerasi",
+      pertanyaan: s.pertanyaan,
+      gambarUrl: s.gambarUrl || "",
+      opsiA: s.opsiA,
+      opsiB: s.opsiB,
+      opsiC: s.opsiC,
+      opsiD: s.opsiD
+    }));
   }
 
-  // Sensor kunci jawaban dan pembahasan untuk dikirim ke browser siswa
-  const sanitizedSoalList = filteredSoal.map((s, index) => ({
-    nomor: index + 1,
-    idSoal: String(s.idSoal),
-    mapel: s.mapel,
-    pertanyaan: s.pertanyaan,
-    gambarUrl: s.gambarUrl || "",
-    opsiA: s.opsiA,
-    opsiB: s.opsiB,
-    opsiC: s.opsiC,
-    opsiD: s.opsiD
-  }));
+  // Ambil hasil nilai jika sudah selesai
+  let hasilNilai = null;
+  if (isFinished) {
+    const nilaiSheet = ss.getSheetByName("Nilai_" + targetNpsn);
+    if (nilaiSheet) {
+      const listNilai = sheetToObjects(nilaiSheet);
+      const rekap = listNilai.find(n => String(n.nisn).trim() === String(nisn).trim());
+      if (rekap) {
+        hasilNilai = {
+          nama: rekap.nama || siswa.nama,
+          nisn: String(rekap.nisn),
+          kelas: rekap.kelas || siswa.kelas,
+          paket: rekap.paket || targetPaket,
+          nilaiAkhir: Number(rekap.nilaiAkhir) || 0,
+          jumlahSoal: Number(rekap.jumlahSoal) || sanitizedSoalList.length,
+          jumlahBenar: Number(rekap.jumlahBenar) || 0,
+          jumlahSalah: Number(rekap.jumlahSalah) || 0,
+          jumlahKosong: Number(rekap.jumlahKosong) || 0,
+          timestamp: rekap.timestamp
+        };
+      }
+    }
+  }
 
-  // Catat waktu mulai jika siswa baru pertama kali masuk
-  if (String(siswa.statusUjian) !== "SEDANG_MENGERJAKAN") {
+  // Catat waktu mulai jika belum
+  if (!isFinished && String(siswa.statusUjian) !== "SEDANG_MENGERJAKAN") {
     pesertaSheet.getRange(siswa._rowIndex, 5, 1, 2).setValues([["SEDANG_MENGERJAKAN", new Date().toISOString()]]);
   }
 
   return {
     success: true,
-    message: "Verifikasi berhasil. Selamat mengerjakan ujian!",
+    message: isFinished 
+      ? "Selamat datang kembali! Anda telah menyelesaikan ujian ini." 
+      : "Identitas berhasil tercatat di database " + namaSekolah + ". Selamat mengerjakan!",
+    isFinished: isFinished,
+    sekolah: {
+      npsn: targetNpsn,
+      namaSekolah: namaSekolah,
+      kodeUnik: sekolah.kodeUnik
+    },
     siswa: {
       nisn: String(siswa.nisn),
       nama: siswa.nama,
-      kelas: siswa.kelas,
+      kelas: siswa.kelas || "VI",
       paket: targetPaket,
+      statusUjian: siswa.statusUjian,
       durasiMenit: 60
     },
-    soalList: sanitizedSoalList
+    soalList: sanitizedSoalList,
+    hasilNilai: hasilNilai
   };
 }
 
@@ -1023,5 +1106,85 @@ function siswaSubmitUjian(payload) {
       jumlahSalah: jumlahSalah,
       jumlahKosong: jumlahKosong
     }
+  };
+}
+
+function siswaGetPembahasan(payload) {
+  const { npsn, nisn, paket } = payload;
+  if (!npsn || !nisn) {
+    return { success: false, message: "NPSN dan NISN wajib diisi." };
+  }
+
+  const ss = getSpreadsheet();
+  const nilaiSheet = ss.getSheetByName("Nilai_" + npsn);
+  if (!nilaiSheet) {
+    return { success: false, message: "Belum ada rekaman nilai ujian untuk sekolah ini." };
+  }
+
+  const listNilai = sheetToObjects(nilaiSheet);
+  const rekap = listNilai.find(n => String(n.nisn).trim() === String(nisn).trim());
+  if (!rekap) {
+    return { success: false, message: "Hasil ujian peserta belum ditemukan. Pastikan sudah menyelesaikan ujian." };
+  }
+
+  let detailJawaban = [];
+  try {
+    if (rekap.detailJawaban) {
+      detailJawaban = JSON.parse(rekap.detailJawaban);
+    }
+  } catch (e) {
+    detailJawaban = [];
+  }
+
+  // Ambil soal dengan KUNCI & PEMBAHASAN LENGKAP
+  const soalSheet = ss.getSheetByName("Soal_" + npsn);
+  if (!soalSheet) {
+    return { success: false, message: "Data bank soal tidak ditemukan." };
+  }
+
+  const allSoal = sheetToObjects(soalSheet);
+  const targetPaket = paket || "PAKET-A";
+  let filteredSoal = allSoal.filter(s => String(s.paket).toUpperCase() === String(targetPaket).toUpperCase());
+  if (filteredSoal.length === 0) filteredSoal = allSoal;
+
+  const listPembahasan = filteredSoal.map((s, index) => {
+    const idSoal = String(s.idSoal);
+    const ans = detailJawaban.find(d => String(d.idSoal) === idSoal);
+    const status = ans ? ans.status : "KOSONG";
+    const jawabanSiswa = ans && ans.siswa ? ans.siswa : "-";
+    const kunciResmi = String(s.kunci).trim().toUpperCase();
+
+    return {
+      nomor: index + 1,
+      idSoal: idSoal,
+      mapel: s.mapel || "Literasi & Numerasi",
+      pertanyaan: s.pertanyaan,
+      gambarUrl: s.gambarUrl || "",
+      opsiA: s.opsiA,
+      opsiB: s.opsiB,
+      opsiC: s.opsiC,
+      opsiD: s.opsiD,
+      kunci: kunciResmi,
+      pembahasan: s.pembahasan || "Pembahasan resmi disiapkan oleh Tim Pengembang Soal.",
+      jawabanSiswa: jawabanSiswa,
+      status: status
+    };
+  });
+
+  return {
+    success: true,
+    hasil: {
+      nama: rekap.nama,
+      nisn: String(rekap.nisn),
+      kelas: rekap.kelas,
+      paket: rekap.paket,
+      nilaiAkhir: Number(rekap.nilaiAkhir) || 0,
+      jumlahSoal: Number(rekap.jumlahSoal) || listPembahasan.length,
+      jumlahBenar: Number(rekap.jumlahBenar) || 0,
+      jumlahSalah: Number(rekap.jumlahSalah) || 0,
+      jumlahKosong: Number(rekap.jumlahKosong) || 0,
+      timestamp: rekap.timestamp
+    },
+    listPembahasan: listPembahasan
   };
 }

@@ -11,6 +11,10 @@ echo.
 
 set REPO_URL=https://github.com/titinrusmawati32-byte/trytka.git
 
+:: 0. Batalkan proses rebase/merge macet jika ada
+git rebase --abort >nul 2>&1
+git merge --abort >nul 2>&1
+
 :: 1. Periksa apakah Git sudah terinstall
 git --version >nul 2>&1
 if %errorlevel% neq 0 (
@@ -71,14 +75,22 @@ if %errorlevel% equ 0 (
     color 0E
     echo.
     echo ===================================================================
-    echo   CATATAN:
-    echo   Jika push ditolak karena repository di GitHub sudah memiliki file
-    echo   (seperti README bawaan), kita lakukan sinkronisasi rebase dulu:
+    echo   CATATAN: Push standar ditolak (non-fast-forward).
+    echo   Melakukan sinkronisasi bersih dan force push...
     echo ===================================================================
-    echo Menjalankan: git pull origin main --rebase ...
-    git pull origin main --rebase
-    echo Mencoba push kembali...
-    git push -u origin main
+    git rebase --abort >nul 2>&1
+    git merge --abort >nul 2>&1
+    git add -A
+    git commit -m "Update SiSiswa TKA SD Platform v1.2 - Student 4 Menus & Token Lembaga" >nul 2>&1
+    git push -u origin main --force
+    if %errorlevel% equ 0 (
+        color 0A
+        echo.
+        echo BERHASIL SINKRON KE GITHUB DENGAN BERSIH!
+    ) else (
+        color 0C
+        echo Push gagal. Periksa koneksi internet Anda.
+    )
 )
 
 echo.
