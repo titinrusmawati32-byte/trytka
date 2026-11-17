@@ -144,6 +144,9 @@ function doPost(e) {
         break;
 
       // Sisi Siswa (CBT Engine)
+      case "siswaVerifyTokenLembaga":
+        response = siswaVerifyTokenLembaga(payload);
+        break;
       case "siswaLoginAndGetSoal":
         response = siswaLoginAndGetSoal(payload);
         break;
@@ -839,8 +842,46 @@ function proktorGetRekapNilai(payload) {
  * =========================================================================================
  */
 
+function siswaVerifyTokenLembaga(payload) {
+  const { kodeUnik, npsn } = payload;
+  if (!kodeUnik && !npsn) {
+    return { success: false, message: "Token / Kode Unik Lembaga wajib diisi." };
+  }
+
+  const ss = getSpreadsheet();
+  const masterSheet = ss.getSheetByName("Master_Sekolah");
+  let daftarSekolah = masterSheet ? sheetToObjects(masterSheet) : MASTER_SEKOLAH_DEFAULT;
+  if (!daftarSekolah || daftarSekolah.length === 0) daftarSekolah = MASTER_SEKOLAH_DEFAULT;
+
+  let sekolah = null;
+  if (kodeUnik) {
+    const clean = String(kodeUnik).trim().toUpperCase();
+    sekolah = daftarSekolah.find(s => 
+      String(s.kodeUnik).trim().toUpperCase() === clean || 
+      String(s.npsn).trim() === clean
+    );
+  }
+  if (!sekolah && npsn) {
+    sekolah = daftarSekolah.find(s => String(s.npsn).trim() === String(npsn).trim());
+  }
+
+  if (!sekolah) {
+    return { success: false, message: "Token / Kode Lembaga tidak valid. Pastikan Anda memasukkan kode unik yang benar dari sekolah." };
+  }
+
+  return {
+    success: true,
+    message: "Token lembaga valid.",
+    sekolah: {
+      npsn: sekolah.npsn,
+      namaSekolah: sekolah.namaSekolah,
+      kodeUnik: sekolah.kodeUnik
+    }
+  };
+}
+
 function siswaLoginAndGetSoal(payload) {
-  let { kodeUnik, npsn, nisn, nama, kelas, tokenUjian } = payload;
+  let { kodeUnik, npsn, nisn, nis, nama, kelas, tokenUjian } = payload;
   if (!nisn) {
     return { success: false, message: "NISN Siswa wajib diisi." };
   }
@@ -876,10 +917,16 @@ function siswaLoginAndGetSoal(payload) {
 
   // 2. Cek & Kelola Data Peserta di Peserta_{targetNpsn}
   const pesertaSheet = getOrCreateSheet(ss, "Peserta_" + targetNpsn, [
-    "nisn", "nama", "kelas", "tokenUjian", "statusUjian", "mulaiUjian", "selesaiUjian"
+    "nisn", "nis", "nama", "kelas", "tokenUjian", "statusUjian", "mulaiUjian", "selesaiUjian"
   ]);
   const pesertaList = sheetToObjects(pesertaSheet);
   let siswa = pesertaList.find(p => String(p.nisn).trim() === String(nisn).trim());
+
+  const cleanNis = nis ? String(nis).trim() : "-";
+  const cleanNama = nama ? String(nama).trim().toUpperCase() : "SISWA";
+  const cleanKelas = kelas ? String(kelas).trim() : "VI";
+  const cleanToken = tokenUjian ? String(tokenUjian).trim().toUpperCase() : "AUTO";
+  const waktuMulai = new Date().toISOString();
 
   // Jika siswa belum ada di database, LAKUKAN REGISTRASI MANDIRI OTOMATIS
   if (!siswa) {
@@ -889,13 +936,10 @@ function siswaLoginAndGetSoal(payload) {
         message: "Nama lengkap siswa wajib diisi untuk pencatatan pertama kali di database sekolah." 
       };
     }
-    const cleanNama = String(nama).trim().toUpperCase();
-    const cleanKelas = kelas ? String(kelas).trim() : "VI";
-    const cleanToken = tokenUjian ? String(tokenUjian).trim().toUpperCase() : "AUTO";
-    const waktuMulai = new Date().toISOString();
 
     pesertaSheet.appendRow([
       String(nisn).trim(),
+      cleanNis,
       cleanNama,
       cleanKelas,
       cleanToken,
@@ -906,6 +950,7 @@ function siswaLoginAndGetSoal(payload) {
 
     siswa = {
       nisn: String(nisn).trim(),
+      nis: cleanNis,
       nama: cleanNama,
       kelas: cleanKelas,
       tokenUjian: cleanToken,
@@ -913,10 +958,18 @@ function siswaLoginAndGetSoal(payload) {
       mulaiUjian: waktuMulai
     };
   } else {
-    // Jika siswa sudah ada, perbarui nama/kelas jika diberikan
-    if (nama && (!siswa.nama || String(siswa.nama).trim() === "")) {
-      pesertaSheet.getRange(siswa._rowIndex, 2).setValue(String(nama).trim().toUpperCase());
-      siswa.nama = String(nama).trim().toUpperCase();
+    // Jika siswa sudah ada, perbarui data jika ada nilai baru
+    if (nis && (!siswa.nis || siswa.nis === "-")) {
+      pesertaSheet.getRange(siswa._rowIndex, 2).setValue(cleanNis);
+      siswa.nis = cleanNis;
+    }
+    if (nama && (!siswa.nama || siswa.nama.trim() === "" || siswa.nama === "SISWA")) {
+      pesertaSheet.getRange(siswa._rowIndex, 3).setValue(cleanNama);
+      siswa.nama = cleanNama;
+    }
+    if (kelas && (!siswa.kelas || siswa.kelas.trim() === "")) {
+      pesertaSheet.getRange(siswa._rowIndex, 4).setValue(cleanKelas);
+      siswa.kelas = cleanKelas;
     }
   }
 
@@ -957,6 +1010,7 @@ function siswaLoginAndGetSoal(payload) {
         hasilNilai = {
           nama: rekap.nama || siswa.nama,
           nisn: String(rekap.nisn),
+          nis: rekap.nis || siswa.nis || cleanNis,
           kelas: rekap.kelas || siswa.kelas,
           paket: rekap.paket || targetPaket,
           nilaiAkhir: Number(rekap.nilaiAkhir) || 0,
@@ -972,14 +1026,14 @@ function siswaLoginAndGetSoal(payload) {
 
   // Catat waktu mulai jika belum
   if (!isFinished && String(siswa.statusUjian) !== "SEDANG_MENGERJAKAN") {
-    pesertaSheet.getRange(siswa._rowIndex, 5, 1, 2).setValues([["SEDANG_MENGERJAKAN", new Date().toISOString()]]);
+    pesertaSheet.getRange(siswa._rowIndex, 6, 1, 2).setValues([["SEDANG_MENGERJAKAN", new Date().toISOString()]]);
   }
 
   return {
     success: true,
     message: isFinished 
       ? "Selamat datang kembali! Anda telah menyelesaikan ujian ini." 
-      : "Identitas berhasil tercatat di database " + namaSekolah + ". Selamat mengerjakan!",
+      : "Identitas (" + siswa.nama + ") berhasil dicatat di database " + namaSekolah + ". Selamat mengerjakan!",
     isFinished: isFinished,
     sekolah: {
       npsn: targetNpsn,
@@ -988,6 +1042,7 @@ function siswaLoginAndGetSoal(payload) {
     },
     siswa: {
       nisn: String(siswa.nisn),
+      nis: siswa.nis || cleanNis,
       nama: siswa.nama,
       kelas: siswa.kelas || "VI",
       paket: targetPaket,
@@ -1000,7 +1055,7 @@ function siswaLoginAndGetSoal(payload) {
 }
 
 function siswaSubmitUjian(payload) {
-  const { npsn, nisn, paket, jawaban } = payload;
+  const { npsn, nisn, nis, paket, jawaban } = payload;
   if (!npsn || !nisn || !jawaban || !Array.isArray(jawaban)) {
     return { success: false, message: "Payload lembar jawaban tidak lengkap." };
   }
@@ -1055,6 +1110,7 @@ function siswaSubmitUjian(payload) {
   const pesertaSheet = ss.getSheetByName("Peserta_" + npsn);
   let namaSiswa = "Peserta Ujian";
   let kelasSiswa = "VI";
+  let nisSiswa = nis || "-";
 
   if (pesertaSheet) {
     const pesertaList = sheetToObjects(pesertaSheet);
@@ -1062,14 +1118,15 @@ function siswaSubmitUjian(payload) {
     if (target) {
       namaSiswa = target.nama;
       kelasSiswa = target.kelas;
+      if (target.nis) nisSiswa = target.nis;
       // Update status peserta menjadi SELESAI
-      pesertaSheet.getRange(target._rowIndex, 5, 1, 3).setValues([["SELESAI", target.mulaiUjian || "", new Date().toISOString()]]);
+      pesertaSheet.getRange(target._rowIndex, 6, 1, 3).setValues([["SELESAI", target.mulaiUjian || "", new Date().toISOString()]]);
     }
   }
 
   // 4. Catat ke Sheet Nilai
   const nilaiHeaders = [
-    "idNilai", "timestamp", "nisn", "nama", "kelas", "paket", "mapel",
+    "idNilai", "timestamp", "nisn", "nis", "nama", "kelas", "paket", "mapel",
     "jumlahSoal", "jumlahBenar", "jumlahSalah", "jumlahKosong", "nilaiAkhir", "detailJawaban"
   ];
   const nilaiSheet = getOrCreateSheet(ss, "Nilai_" + npsn, nilaiHeaders);
@@ -1081,6 +1138,7 @@ function siswaSubmitUjian(payload) {
     idNilai,
     timestamp,
     String(nisn),
+    nisSiswa,
     namaSiswa,
     kelasSiswa,
     paket || "PAKET-A",
@@ -1099,6 +1157,7 @@ function siswaSubmitUjian(payload) {
     hasil: {
       nama: namaSiswa,
       nisn: String(nisn),
+      nis: nisSiswa,
       paket: paket || "PAKET-A",
       nilaiAkhir: nilaiAkhir,
       jumlahSoal: jumlahSoal,

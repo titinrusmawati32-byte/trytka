@@ -81,7 +81,7 @@ if %errorlevel% equ 0 (
     git rebase --abort >nul 2>&1
     git merge --abort >nul 2>&1
     git add -A
-    git commit -m "Update SiSiswa TKA SD Platform v1.2 - Student 4 Menus & Token Lembaga" >nul 2>&1
+    git commit -m "Update SiSiswa TKA SD - Login Token Lembaga + Pop-up Identitas Siswa (Nama, NISN, NIS)" >nul 2>&1
     git push -u origin main --force
     if %errorlevel% equ 0 (
         color 0A

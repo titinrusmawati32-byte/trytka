@@ -44,14 +44,6 @@
               700: '#4F46E5',
               800: '#4338CA',
               900: '#3730A3',
-            },
-            pastel: {
-              purple: '#EBE5FF',
-              lavender: '#F4F0FF',
-              yellow: '#FEF3C7',
-              peach: '#FFE4E6',
-              mint: '#D1FAE5',
-              sky: '#E0F2FE'
             }
           }
         }
@@ -155,20 +147,78 @@
   </div>
 
   <!-- ========================================================================= -->
-  <!-- MODAL: QR CAMERA SCANNER -->
+  <!-- MODAL: POP-UP PENGISIAN IDENTITAS SISWA (NAMA, NISN, NIS) -->
   <!-- ========================================================================= -->
-  <div id="modalScanner" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-    <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-200 dark:border-slate-800">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
-          <i class="fa-solid fa-qrcode text-brand-600"></i> Scan Kartu Peserta
-        </h3>
-        <button onclick="stopQrScanner()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 flex items-center justify-center">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
+  <div id="modalIdentitasSiswa" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-purple-200 dark:border-slate-800 animate-in fade-in zoom-in duration-300">
+      
+      <!-- Header Pop-up -->
+      <div class="text-center mb-6">
+        <div class="w-16 h-16 bg-gradient-to-tr from-brand-600 to-purple-500 text-white rounded-3xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-brand-600/20 text-3xl">
+          👦
+        </div>
+        <h3 class="text-xl font-extrabold text-slate-900 dark:text-white">Lengkapi Identitas Siswa</h3>
+        <p class="text-xs text-purple-600 dark:text-purple-400 font-semibold mt-1" id="popSekolahTitle">
+          SDN Sumberejo 04
+        </p>
+        <p class="text-[11px] text-slate-500 mt-0.5">
+          Data ini akan tercatat resmi di database asesmen sekolahmu.
+        </p>
       </div>
-      <div id="qrReader" class="overflow-hidden rounded-2xl bg-black aspect-square"></div>
-      <p class="text-xs text-center text-slate-500 mt-3">Arahkan kamera ke QR Code yang ada pada Kartu Peserta Ujian.</p>
+
+      <!-- Form Pengisian Identitas -->
+      <form id="formIdentitasSiswa" onsubmit="handleIdentitasSubmit(event)" class="space-y-3.5">
+        
+        <!-- 1. Nama Lengkap -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider mb-1">
+            <i class="fa-solid fa-user text-brand-600 mr-1"></i> 1. Nama Lengkap Siswa
+          </label>
+          <input type="text" id="popNama" required placeholder="Contoh: AHMAD FAUZI" style="text-transform: uppercase;"
+                 class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-600 focus:bg-white">
+        </div>
+
+        <!-- 2. NISN Siswa (10 Digit) -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider mb-1">
+            <i class="fa-solid fa-id-card text-brand-600 mr-1"></i> 2. NISN Siswa (10 Digit)
+          </label>
+          <input type="text" id="popNisn" required maxlength="10" inputmode="numeric" placeholder="Contoh: 0123456789"
+                 class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-mono tracking-wider focus:outline-none focus:border-brand-600 focus:bg-white">
+        </div>
+
+        <!-- 3. NIS (Nomor Induk Siswa Lokal) -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider mb-1">
+            <i class="fa-solid fa-hashtag text-brand-600 mr-1"></i> 3. NIS (Nomor Induk Siswa di Sekolah)
+          </label>
+          <input type="text" id="popNis" required placeholder="Contoh: 4521" inputmode="numeric"
+                 class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-mono tracking-wider focus:outline-none focus:border-brand-600 focus:bg-white">
+        </div>
+
+        <!-- 4. Kelas / Rombel -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider mb-1">
+            <i class="fa-solid fa-chalkboard-user text-brand-600 mr-1"></i> 4. Kelas / Rombel
+          </label>
+          <select id="popKelas" required class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:border-brand-600">
+            <option value="Kelas VI-A">Kelas VI-A</option>
+            <option value="Kelas VI-B">Kelas VI-B</option>
+            <option value="Kelas VI-C">Kelas VI-C</option>
+            <option value="Kelas VI">Kelas VI</option>
+          </select>
+        </div>
+
+        <!-- Tombol Simpan Identitas -->
+        <div class="pt-2">
+          <button type="submit" id="btnSaveIdentitas"
+                  class="w-full py-3.5 bg-gradient-to-r from-brand-600 to-purple-600 hover:from-brand-700 hover:to-purple-700 active:scale-[0.98] text-white font-extrabold rounded-2xl shadow-lg shadow-brand-600/30 transition flex items-center justify-center gap-2 text-sm">
+            <i class="fa-solid fa-floppy-disk"></i>
+            <span>Simpan & Masuk ke Dashboard</span>
+          </button>
+        </div>
+
+      </form>
     </div>
   </div>
 
@@ -182,7 +232,7 @@
           <h3 class="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
             <i class="fa-solid fa-school text-brand-600"></i> Pilih Asal Sekolah Kamu
           </h3>
-          <p class="text-xs text-slate-500">Klik sekolahmu untuk mengisi Kode Unik secara otomatis.</p>
+          <p class="text-xs text-slate-500">Klik sekolahmu untuk mengisi Token Lembaga secara otomatis.</p>
         </div>
         <button onclick="closeDaftarSekolahModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center hover:bg-slate-200">
           <i class="fa-solid fa-xmark"></i>
@@ -296,13 +346,13 @@
   </div>
 
   <!-- ========================================================================= -->
-  <!-- 1. VIEW LOGIN & FORM IDENTITAS MANDIRI SISWA -->
+  <!-- 1. VIEW LOGIN SISWA (HANYA MENGGUNAKAN TOKEN LEMBAGA) -->
   <!-- ========================================================================= -->
-  <section id="viewLogin" class="flex-1 flex flex-col justify-center items-center p-4 sm:p-6 max-w-lg mx-auto w-full my-auto">
+  <section id="viewLogin" class="flex-1 flex flex-col justify-center items-center p-4 sm:p-6 max-w-md mx-auto w-full my-auto">
     
-    <!-- Hero Banner Card (Pastel Kid-Friendly Welcome) -->
+    <!-- Hero Banner Card (Pastel Welcome) -->
     <div class="w-full bg-gradient-to-br from-indigo-500 via-purple-600 to-brand-700 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-indigo-500/20 mb-6 text-center relative overflow-hidden">
-      <!-- Decorative circles -->
+      <!-- Decorative background blur -->
       <div class="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-white/10 blur-xl pointer-events-none"></div>
       <div class="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-purple-400/20 blur-xl pointer-events-none"></div>
 
@@ -318,15 +368,15 @@
       </p>
     </div>
 
-    <!-- Card Form Login & Pengisian Identitas -->
+    <!-- Card Form Login (Khusus Token Lembaga) -->
     <div class="bg-white dark:bg-slate-900 w-full rounded-3xl p-6 sm:p-8 shadow-xl border border-purple-100 dark:border-slate-800">
-      <form id="formLogin" onsubmit="handleLoginSubmit(event)" class="space-y-4">
+      <form id="formLogin" onsubmit="handleTokenLoginSubmit(event)" class="space-y-4">
         
-        <!-- Field 1: Kode Unik / PIN Lembaga -->
+        <!-- Field Utama: Token Lembaga -->
         <div>
           <div class="flex justify-between items-center mb-1.5">
             <label class="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
-              <i class="fa-solid fa-key text-brand-600 mr-1"></i> 1. Kode / PIN Lembaga
+              <i class="fa-solid fa-key text-brand-600 mr-1"></i> Masukkan Token Lembaga
             </label>
             <button type="button" onclick="openDaftarSekolahModal()" class="text-[11px] font-bold text-brand-600 hover:text-brand-700 underline">
               Pilih Sekolah ▾
@@ -334,63 +384,24 @@
           </div>
           <div class="relative">
             <input type="text" id="loginKodeUnik" required placeholder="Contoh: SMB04-3918" oninput="handleKodeUnikChange(this.value)"
-                   class="w-full px-4 py-3.5 bg-purple-50/50 dark:bg-slate-800 border-2 border-purple-200 dark:border-slate-700 rounded-2xl text-sm font-mono uppercase tracking-wider font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-600 focus:bg-white">
-            <div id="kodeStatusBadge" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold px-2 py-1 rounded-xl bg-emerald-100 text-emerald-700 flex items-center gap-1">
-              <i class="fa-solid fa-check"></i> <span id="namaSekolahTerdeteksi">SDN</span>
-            </div>
+                   class="w-full px-4 py-4 bg-purple-50/50 dark:bg-slate-800 border-2 border-purple-200 dark:border-slate-700 rounded-2xl text-base font-mono uppercase tracking-wider font-extrabold text-slate-900 dark:text-white focus:outline-none focus:border-brand-600 focus:bg-white text-center">
           </div>
-          <p class="text-[11px] text-slate-500 mt-1">Diberikan oleh Bapak/Ibu Guru atau Proktor sekolah masing-masing.</p>
-        </div>
-
-        <div class="border-t border-purple-100 dark:border-slate-800 pt-3">
-          <div class="text-[11px] font-extrabold text-purple-700 dark:text-purple-300 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-            <i class="fa-solid fa-id-badge"></i> Identitas Siswa (Diisi Sendiri)
+          <!-- Badge Terverifikasi Otomatis -->
+          <div id="kodeStatusBadge" class="hidden mt-2 p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800 flex items-center justify-center gap-2">
+            <i class="fa-solid fa-circle-check text-emerald-600"></i>
+            <span>Sekolah Terdeteksi: <strong id="namaSekolahTerdeteksi">SDN</strong></span>
           </div>
-
-          <!-- Field 2: NISN Siswa -->
-          <div class="mb-3.5">
-            <label class="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider mb-1.5">
-              <i class="fa-solid fa-id-card text-brand-600 mr-1"></i> 2. NISN Siswa (10 Digit)
-            </label>
-            <input type="text" id="loginNisn" required maxlength="10" inputmode="numeric" placeholder="Contoh: 0123456789"
-                   class="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-mono tracking-wider focus:outline-none focus:border-brand-600 focus:bg-white">
-          </div>
-
-          <!-- Field 3: Nama Lengkap Siswa -->
-          <div class="mb-3.5">
-            <label class="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider mb-1.5">
-              <i class="fa-solid fa-user text-brand-600 mr-1"></i> 3. Nama Lengkap Siswa
-            </label>
-            <input type="text" id="loginNama" required placeholder="Contoh: AHMAD FAUZI" style="text-transform: uppercase;"
-                   class="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-brand-600 focus:bg-white">
-          </div>
-
-          <!-- Field 4: Kelas / Rombel -->
-          <div>
-            <label class="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider mb-1.5">
-              <i class="fa-solid fa-chalkboard-user text-brand-600 mr-1"></i> 4. Kelas / Rombel
-            </label>
-            <select id="loginKelas" required class="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:border-brand-600">
-              <option value="Kelas VI-A">Kelas VI-A</option>
-              <option value="Kelas VI-B">Kelas VI-B</option>
-              <option value="Kelas VI-C">Kelas VI-C</option>
-              <option value="Kelas VI">Kelas VI</option>
-            </select>
-          </div>
+          <p class="text-[11px] text-slate-500 mt-2 text-center">
+            Token Lembaga diumumkan oleh Guru / Pengawas di kelas.
+          </p>
         </div>
 
         <!-- Tombol Aksi Masuk -->
-        <div class="pt-3 space-y-3">
+        <div class="pt-2">
           <button type="submit" id="btnLoginSubmit"
                   class="w-full py-4 bg-gradient-to-r from-brand-600 to-purple-600 hover:from-brand-700 hover:to-purple-700 active:scale-[0.98] text-white font-extrabold rounded-2xl shadow-lg shadow-brand-600/30 transition flex items-center justify-center gap-2 text-base">
-            <span>Masuk ke Ruang Asesmen</span>
+            <span>Masuk ke Aplikasi</span>
             <i class="fa-solid fa-arrow-right"></i>
-          </button>
-
-          <button type="button" onclick="startQrScanner()"
-                  class="w-full py-3 bg-purple-50 hover:bg-purple-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-purple-700 dark:text-purple-300 font-bold rounded-2xl transition flex items-center justify-center gap-2 text-xs">
-            <i class="fa-solid fa-camera"></i>
-            <span>Scan QR Kartu Peserta (Cepat)</span>
           </button>
         </div>
 
@@ -423,10 +434,13 @@
           <div>
             <div class="flex items-center gap-1.5">
               <span class="text-xs text-slate-500">Halo,</span>
-              <strong id="shellStudentName" class="text-sm font-bold text-slate-900 dark:text-white truncate max-w-[150px] sm:max-w-[220px]">Ahmad Fauzi</strong>
+              <strong id="shellStudentName" class="text-sm font-bold text-slate-900 dark:text-white truncate max-w-[150px] sm:max-w-[220px]">Siswa</strong>
+              <button onclick="openEditIdentitasModal()" title="Ubah Identitas" class="text-xs text-brand-600 hover:text-brand-700 ml-1">
+                <i class="fa-solid fa-pen-to-square"></i>
+              </button>
             </div>
-            <div id="shellSchoolInfo" class="text-[11px] text-purple-600 dark:text-purple-400 font-semibold truncate max-w-[180px] sm:max-w-[300px]">
-              SDN Sumberejo 04 • Kelas VI-A
+            <div id="shellSchoolInfo" class="text-[11px] text-purple-600 dark:text-purple-400 font-semibold truncate max-w-[180px] sm:max-w-[320px]">
+              SDN Sumberejo 04
             </div>
           </div>
         </div>
@@ -510,15 +524,15 @@
         <div class="space-y-2.5 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
           <div class="flex items-start gap-2.5">
             <span class="w-5 h-5 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center font-bold shrink-0 text-[10px]">1</span>
-            <p><strong>Dua Seksi Soal:</strong> Ujian mencakup Literasi Membaca dan Numerasi Berhitung secara seimbang.</p>
+            <p><strong>Identitas Lengkap:</strong> Pastikan Nama, NISN, dan NIS sekolahmu sudah sesuai.</p>
           </div>
           <div class="flex items-start gap-2.5">
             <span class="w-5 h-5 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center font-bold shrink-0 text-[10px]">2</span>
-            <p><strong>Papan Buram Digital:</strong> Butuh mencoret-coret saat menghitung? Gunakan fitur <em>Papan Buram</em> di menu ujian.</p>
+            <p><strong>Papan Buram Digital:</strong> Butuh menghitung coret-coret? Gunakan fitur <em>Papan Buram</em> di menu ujian.</p>
           </div>
           <div class="flex items-start gap-2.5">
             <span class="w-5 h-5 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center font-bold shrink-0 text-[10px]">3</span>
-            <p><strong>Otomatis Tersimpan:</strong> Jawabanmu otomatis disimpan. Jika HP ter-refresh, jawabanmu tetap aman.</p>
+            <p><strong>Otomatis Tersimpan:</strong> Jawabanmu otomatis tersimpan di server sekolah setiap kali memilih opsi.</p>
           </div>
           <div class="flex items-start gap-2.5">
             <span class="w-5 h-5 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center font-bold shrink-0 text-[10px]">4</span>
@@ -763,7 +777,7 @@
           <!-- Data Siswa -->
           <div class="max-w-md mx-auto text-xs space-y-2 mb-6">
             <div class="flex"><span class="w-36 text-slate-500">Nama Peserta</span><span class="font-bold">: <span id="printNama">-</span></span></div>
-            <div class="flex"><span class="w-36 text-slate-500">NISN</span><span class="font-mono font-bold">: <span id="printNisn">-</span></span></div>
+            <div class="flex"><span class="w-36 text-slate-500">NISN / NIS</span><span class="font-mono font-bold">: <span id="printNisn">-</span> / <span id="printNis">-</span></span></div>
             <div class="flex"><span class="w-36 text-slate-500">Asal Satuan Pendidikan</span><span>: <span id="printSekolah">-</span></span></div>
             <div class="flex"><span class="w-36 text-slate-500">Kelas / Rombel</span><span>: <span id="printKelas">-</span></span></div>
             <div class="flex"><span class="w-36 text-slate-500">Mata Asesmen</span><span class="font-bold">: Literasi & Numerasi SD</span></div>
@@ -854,7 +868,7 @@
   <!-- ========================================================================= -->
   <script>
     /**
-     * MASTER DAFTAR 14 SDN SE-KECAMATAN AMBULU DENGAN KODE UNIK
+     * MASTER DAFTAR 14 SDN SE-KECAMATAN AMBULU DENGAN TOKEN KODE UNIK
      */
     const MASTER_SEKOLAH_LIST = [
       { npsn: "20524058", namaSekolah: "SDN Sumberejo 04", kodeUnik: "SMB04-3918" },
@@ -892,8 +906,7 @@
       isSubmitted: false,
       hasilNilai: null,
       listPembahasan: [],
-      activeFilterPembahasan: 'ALL',
-      qrScanner: null
+      activeFilterPembahasan: 'ALL'
     };
 
     /**
@@ -1013,7 +1026,7 @@
     }
 
     /**
-     * Deteksi Otomatis Kode Unik Lembaga saat Diketik
+     * Deteksi Otomatis Token Lembaga saat Diketik
      */
     function handleKodeUnikChange(val) {
       const clean = val.trim().toUpperCase();
@@ -1037,12 +1050,16 @@
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          if (parsed && parsed.siswa && parsed.sekolah) {
+          if (parsed && parsed.sekolah) {
             Object.assign(CBT_STATE, parsed);
             showAppShell();
-            if (CBT_STATE.isSubmitted) {
+
+            // Jika siswa belum melengkapi identitas, buka pop-up
+            if (!CBT_STATE.siswa || !CBT_STATE.siswa.nisn || !CBT_STATE.siswa.nama) {
+              openIdentitasModal();
+            } else if (CBT_STATE.isSubmitted) {
               openTab('nilai');
-              renderNilaiView();
+              renderNilaiTab();
             } else {
               openTab('dashboard');
               startCountdownTimer();
@@ -1055,26 +1072,191 @@
     }
 
     /**
-     * Tampilkan Shell Aplikasi dan Sembunyikan Form Login
+     * STEP 1: HANDLER LOGIN DENGAN TOKEN LEMBAGA
+     */
+    async function handleTokenLoginSubmit(event) {
+      event.preventDefault();
+      const kodeUnik = document.getElementById('loginKodeUnik').value.trim();
+
+      if (!kodeUnik) {
+        showToast("Masukkan Token Lembaga terlebih dahulu.", "error");
+        return;
+      }
+
+      const btn = document.getElementById('btnLoginSubmit');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> <span>Memvalidasi Lembaga...</span>`;
+
+      try {
+        const activeGasUrl = typeof getGasUrl === 'function' ? getGasUrl() : (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.gasUrl : '');
+        const payload = {
+          action: 'siswaVerifyTokenLembaga',
+          gasUrl: activeGasUrl,
+          payload: { kodeUnik }
+        };
+
+        const res = await fetch(CBT_STATE.apiEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (data.success && data.sekolah) {
+          CBT_STATE.sekolah = data.sekolah;
+          saveSessionToLocal();
+          showAppShell();
+
+          // Munculkan Pop-up Pengisian Identitas Siswa
+          openIdentitasModal();
+          showToast(`Berhasil masuk ke ${data.sekolah.namaSekolah}! Silakan lengkapi identitasmu.`, "info");
+        } else {
+          showToast(data.message || "Token Lembaga tidak valid. Periksa kembali.", "error");
+        }
+      } catch (err) {
+        console.warn("Backend belum merespons. Menggunakan simulasi lokal.");
+        const match = MASTER_SEKOLAH_LIST.find(s => s.kodeUnik.toUpperCase() === kodeUnik.toUpperCase()) || {
+          npsn: "20524058",
+          namaSekolah: "SDN Sumberejo 04",
+          kodeUnik: kodeUnik
+        };
+
+        CBT_STATE.sekolah = match;
+        saveSessionToLocal();
+        showAppShell();
+        openIdentitasModal();
+        showToast(`Berhasil masuk ke ${match.namaSekolah}!`, "info");
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span>Masuk ke Aplikasi</span> <i class="fa-solid fa-arrow-right"></i>`;
+      }
+    }
+
+    /**
+     * Tampilkan Shell Aplikasi & Sembunyikan Login
      */
     function showAppShell() {
       document.getElementById('viewLogin').classList.add('hidden');
       document.getElementById('viewAppShell').classList.remove('hidden');
 
-      // Update Info Profil di Shell
-      document.getElementById('shellStudentName').innerText = CBT_STATE.siswa.nama;
-      document.getElementById('shellSchoolInfo').innerText = `${CBT_STATE.sekolah.namaSekolah} • ${CBT_STATE.siswa.kelas}`;
-      document.getElementById('dashTotalSoal').innerText = CBT_STATE.soalList.length;
+      if (CBT_STATE.sekolah) {
+        document.getElementById('popSekolahTitle').innerText = CBT_STATE.sekolah.namaSekolah;
+        document.getElementById('shellSchoolInfo').innerText = CBT_STATE.sekolah.namaSekolah;
+      }
 
-      // Update Status Badge
-      const statusText = document.getElementById('shellStatusText');
-      const heroBtnText = document.getElementById('heroActionText');
-      if (CBT_STATE.isSubmitted) {
-        statusText.innerText = 'Ujian Selesai';
-        heroBtnText.innerText = 'Lihat Nilai & Hasil Ujian 🏆';
-      } else {
-        statusText.innerText = 'Siap Ujian';
-        heroBtnText.innerText = 'Mulai Kerjakan Ujian Sekarang ✍️';
+      if (CBT_STATE.siswa) {
+        document.getElementById('shellStudentName').innerText = CBT_STATE.siswa.nama || 'Siswa';
+        document.getElementById('shellSchoolInfo').innerText = `${CBT_STATE.sekolah.namaSekolah} • ${CBT_STATE.siswa.kelas || 'VI'} • NIS: ${CBT_STATE.siswa.nis || '-'}`;
+      }
+
+      document.getElementById('dashTotalSoal').innerText = CBT_STATE.soalList.length || 40;
+    }
+
+    /**
+     * BUKA POP-UP IDENTITAS SISWA (NAMA, NISN, NIS)
+     */
+    function openIdentitasModal() {
+      if (CBT_STATE.siswa) {
+        document.getElementById('popNama').value = CBT_STATE.siswa.nama || '';
+        document.getElementById('popNisn').value = CBT_STATE.siswa.nisn || '';
+        document.getElementById('popNis').value = CBT_STATE.siswa.nis || '';
+        if (CBT_STATE.siswa.kelas) document.getElementById('popKelas').value = CBT_STATE.siswa.kelas;
+      }
+      document.getElementById('modalIdentitasSiswa').classList.remove('hidden');
+    }
+
+    function openEditIdentitasModal() {
+      openIdentitasModal();
+    }
+
+    /**
+     * STEP 2: HANDLER SIMPAN IDENTITAS SISWA (DI DALAM APLIKASI)
+     */
+    async function handleIdentitasSubmit(event) {
+      event.preventDefault();
+      const nama = document.getElementById('popNama').value.trim().toUpperCase();
+      const nisn = document.getElementById('popNisn').value.trim();
+      const nis = document.getElementById('popNis').value.trim();
+      const kelas = document.getElementById('popKelas').value;
+
+      if (!nama || !nisn || !nis) {
+        showToast("Mohon lengkapi Nama, NISN, dan NIS.", "error");
+        return;
+      }
+
+      const btn = document.getElementById('btnSaveIdentitas');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> <span>Mencatat Identitas...</span>`;
+
+      try {
+        const activeGasUrl = typeof getGasUrl === 'function' ? getGasUrl() : (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.gasUrl : '');
+        const payload = {
+          action: 'siswaLoginAndGetSoal',
+          gasUrl: activeGasUrl,
+          payload: {
+            kodeUnik: CBT_STATE.sekolah.kodeUnik,
+            npsn: CBT_STATE.sekolah.npsn,
+            nisn: nisn,
+            nis: nis,
+            nama: nama,
+            kelas: kelas
+          }
+        };
+
+        const res = await fetch(CBT_STATE.apiEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          CBT_STATE.siswa = data.siswa;
+          CBT_STATE.soalList = (data.soalList && data.soalList.length > 0) ? data.soalList : DUMMY_SOAL;
+          CBT_STATE.secondsRemaining = (data.siswa.durasiMenit || 60) * 60;
+          CBT_STATE.isSubmitted = !!data.isFinished;
+
+          if (data.hasilNilai) CBT_STATE.hasilNilai = data.hasilNilai;
+
+          saveSessionToLocal();
+          document.getElementById('modalIdentitasSiswa').classList.add('hidden');
+          showAppShell();
+          showToast(`Identitas ${nama} berhasil dicatat di database!`, "info");
+
+          if (CBT_STATE.isSubmitted) {
+            openTab('nilai');
+          } else {
+            openTab('dashboard');
+            startCountdownTimer();
+          }
+        } else {
+          showToast(data.message || "Gagal mencatat identitas.", "error");
+        }
+      } catch (err) {
+        console.warn("Backend offline. Menyimpan identitas dalam mode simulasi.");
+        CBT_STATE.siswa = {
+          nisn: nisn,
+          nis: nis,
+          nama: nama,
+          kelas: kelas,
+          paket: "PAKET-A",
+          durasiMenit: 60
+        };
+        CBT_STATE.soalList = DUMMY_SOAL;
+        CBT_STATE.secondsRemaining = 3600;
+        CBT_STATE.isSubmitted = false;
+
+        saveSessionToLocal();
+        document.getElementById('modalIdentitasSiswa').classList.add('hidden');
+        showAppShell();
+        showToast(`Identitas ${nama} berhasil disimpan (Mode Simulasi)!`, "info");
+        openTab('dashboard');
+        startCountdownTimer();
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> <span>Simpan & Masuk ke Dashboard</span>`;
       }
     }
 
@@ -1082,7 +1264,6 @@
      * NAVIGASI 4 TAB UTAMA (FLOATING DOCK)
      */
     function openTab(tabName) {
-      // Sembunyikan semua tab
       ['dashboard', 'ujian', 'pembahasan', 'nilai'].forEach(t => {
         const cap = t.charAt(0).toUpperCase() + t.slice(1);
         const el = document.getElementById('tab' + cap);
@@ -1091,7 +1272,6 @@
         if (btn) btn.classList.remove('active', 'bg-brand-600', 'text-white');
       });
 
-      // Buka tab aktif
       const activeCap = tabName.charAt(0).toUpperCase() + tabName.slice(1);
       const activeEl = document.getElementById('tab' + activeCap);
       const activeBtn = document.getElementById('dockBtn' + activeCap);
@@ -1102,7 +1282,6 @@
       CBT_STATE.currentTab = tabName;
       window.scrollTo({ top: 0, behavior: 'smooth' });
 
-      // Tab Specific Render
       if (tabName === 'ujian') {
         if (CBT_STATE.soalList && CBT_STATE.soalList.length > 0) {
           renderQuestion(CBT_STATE.currentIndex);
@@ -1123,97 +1302,6 @@
     }
 
     /**
-     * HANDLER LOGIN & REGISTRASI MANDIRI SISWA
-     */
-    async function handleLoginSubmit(event) {
-      event.preventDefault();
-      const kodeUnik = document.getElementById('loginKodeUnik').value.trim();
-      const nisn = document.getElementById('loginNisn').value.trim();
-      const nama = document.getElementById('loginNama').value.trim().toUpperCase();
-      const kelas = document.getElementById('loginKelas').value;
-
-      if (!kodeUnik || !nisn || !nama) {
-        showToast("Mohon lengkapi seluruh kolom formulir.", "error");
-        return;
-      }
-
-      const btn = document.getElementById('btnLoginSubmit');
-      btn.disabled = true;
-      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> <span>Mendaftarkan Identitas...</span>`;
-
-      try {
-        const activeGasUrl = typeof getGasUrl === 'function' ? getGasUrl() : (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.gasUrl : '');
-        const payload = {
-          action: 'siswaLoginAndGetSoal',
-          gasUrl: activeGasUrl,
-          payload: { kodeUnik, nisn, nama, kelas }
-        };
-
-        const res = await fetch(CBT_STATE.apiEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        const data = await res.json();
-
-        if (data.success) {
-          CBT_STATE.sekolah = data.sekolah;
-          CBT_STATE.siswa = data.siswa;
-          CBT_STATE.soalList = (data.soalList && data.soalList.length > 0) ? data.soalList : DUMMY_SOAL;
-          CBT_STATE.secondsRemaining = (data.siswa.durasiMenit || 60) * 60;
-          CBT_STATE.isSubmitted = !!data.isFinished;
-
-          if (data.hasilNilai) {
-            CBT_STATE.hasilNilai = data.hasilNilai;
-          }
-
-          saveSessionToLocal();
-          showAppShell();
-          showToast(data.message || "Selamat datang di ruang asesmen!", "info");
-
-          if (CBT_STATE.isSubmitted) {
-            openTab('nilai');
-          } else {
-            openTab('dashboard');
-            startCountdownTimer();
-          }
-        } else {
-          showToast(data.message || "Gagal masuk. Periksa kembali Kode Lembaga.", "error");
-        }
-      } catch (err) {
-        console.warn("Backend belum terhubung. Mengaktifkan Mode Simulasi Ujian Mandiri.", err);
-        // Fallback Standalone / Simulasi Mandiri
-        const matchedSekolah = MASTER_SEKOLAH_LIST.find(s => s.kodeUnik.toUpperCase() === kodeUnik.toUpperCase()) || {
-          npsn: "20524058",
-          namaSekolah: "SDN Sumberejo 04",
-          kodeUnik: kodeUnik
-        };
-
-        CBT_STATE.sekolah = matchedSekolah;
-        CBT_STATE.siswa = {
-          nisn: nisn,
-          nama: nama,
-          kelas: kelas,
-          paket: "PAKET-A",
-          durasiMenit: 60
-        };
-        CBT_STATE.soalList = DUMMY_SOAL;
-        CBT_STATE.secondsRemaining = 3600;
-        CBT_STATE.isSubmitted = false;
-
-        saveSessionToLocal();
-        showAppShell();
-        showToast("Terhubung dalam Mode Simulasi Mandiri (" + matchedSekolah.namaSekolah + ")", "info");
-        openTab('dashboard');
-        startCountdownTimer();
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = `<span>Masuk ke Ruang Asesmen</span> <i class="fa-solid fa-arrow-right"></i>`;
-      }
-    }
-
-    /**
      * RENDER SOAL PADA MENU UJIAN
      */
     function renderQuestion(index) {
@@ -1224,17 +1312,14 @@
       const q = CBT_STATE.soalList[index];
       const qNum = index + 1;
 
-      // Update Header Soal
       document.getElementById('currentQNumber').innerText = qNum;
       document.getElementById('navCurrentNum').innerText = qNum;
       document.getElementById('navTotalNum').innerText = CBT_STATE.soalList.length;
       document.getElementById('questionTopic').innerText = q.mapel || 'Literasi & Numerasi';
       document.getElementById('paletteBadge').innerText = `${qNum}/${CBT_STATE.soalList.length}`;
 
-      // Teks Soal
       document.getElementById('questionTextContainer').innerHTML = q.pertanyaan;
 
-      // Gambar Soal
       const imgContainer = document.getElementById('questionImageContainer');
       const imgEl = document.getElementById('questionImage');
       if (q.gambarUrl && q.gambarUrl.trim() !== '') {
@@ -1244,7 +1329,6 @@
         imgContainer.classList.add('hidden');
       }
 
-      // Status Ragu-Ragu
       const isRagu = !!CBT_STATE.raguRagu[q.idSoal];
       const raguBtn = document.getElementById('btnRaguToggle');
       const raguIcon = document.getElementById('raguIcon');
@@ -1260,7 +1344,6 @@
         raguIcon.classList.replace('fa-square-check', 'fa-square');
       }
 
-      // Render Pilihan A, B, C, D
       const optionsContainer = document.getElementById('optionsContainer');
       optionsContainer.innerHTML = '';
       const currentSelected = CBT_STATE.jawaban[q.idSoal] || '';
@@ -1294,7 +1377,6 @@
         optionsContainer.appendChild(card);
       });
 
-      // Update Nav Buttons State
       document.getElementById('btnPrevQ').disabled = (index === 0);
 
       const isLast = (index === CBT_STATE.soalList.length - 1);
@@ -1332,15 +1414,11 @@
     }
 
     function navPrevQuestion() {
-      if (CBT_STATE.currentIndex > 0) {
-        renderQuestion(CBT_STATE.currentIndex - 1);
-      }
+      if (CBT_STATE.currentIndex > 0) renderQuestion(CBT_STATE.currentIndex - 1);
     }
 
     function navNextQuestion() {
-      if (CBT_STATE.currentIndex < CBT_STATE.soalList.length - 1) {
-        renderQuestion(CBT_STATE.currentIndex + 1);
-      }
+      if (CBT_STATE.currentIndex < CBT_STATE.soalList.length - 1) renderQuestion(CBT_STATE.currentIndex + 1);
     }
 
     /**
@@ -1521,6 +1599,7 @@
         payload: {
           npsn: CBT_STATE.sekolah.npsn,
           nisn: CBT_STATE.siswa.nisn,
+          nis: CBT_STATE.siswa.nis || '-',
           paket: CBT_STATE.siswa.paket || 'PAKET-A',
           jawaban: jawabanArray
         }
@@ -1570,6 +1649,7 @@
       CBT_STATE.hasilNilai = {
         nama: CBT_STATE.siswa.nama,
         nisn: CBT_STATE.siswa.nisn,
+        nis: CBT_STATE.siswa.nis || '-',
         paket: CBT_STATE.siswa.paket || 'PAKET-A',
         nilaiAkhir: nilaiAkhir,
         jumlahSoal: totalSoal,
@@ -1601,7 +1681,6 @@
       document.getElementById('resultSalah').innerText = h.jumlahSalah;
       document.getElementById('resultKosong').innerText = h.jumlahKosong;
 
-      // Predikat
       let predikat = "Perlu Bimbingan";
       if (h.nilaiAkhir >= 85) predikat = "Sangat Memuaskan (A)";
       else if (h.nilaiAkhir >= 75) predikat = "Baik / Tuntas (B)";
@@ -1612,6 +1691,7 @@
       document.getElementById('printSekolahTitle').innerText = (CBT_STATE.sekolah.namaSekolah + " AMBULU").toUpperCase();
       document.getElementById('printNama').innerText = CBT_STATE.siswa.nama;
       document.getElementById('printNisn').innerText = CBT_STATE.siswa.nisn;
+      document.getElementById('printNis').innerText = CBT_STATE.siswa.nis || '-';
       document.getElementById('printSekolah').innerText = CBT_STATE.sekolah.namaSekolah;
       document.getElementById('printKelas').innerText = CBT_STATE.siswa.kelas;
       document.getElementById('printBenar').innerText = h.jumlahBenar;
@@ -1878,58 +1958,6 @@
     function setPenColor(color) {
       penColor = color;
       if (ctx) ctx.strokeStyle = color;
-    }
-
-    /**
-     * QR CODE SCANNER KARTU PESERTA
-     */
-    function startQrScanner() {
-      document.getElementById('modalScanner').classList.remove('hidden');
-      CBT_STATE.qrScanner = new Html5Qrcode("qrReader");
-
-      CBT_STATE.qrScanner.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 220, height: 220 } },
-        (decodedText) => {
-          stopQrScanner();
-          handleQrScanned(decodedText);
-        },
-        (error) => {}
-      ).catch(err => {
-        showToast("Kamera tidak dapat diakses atau izin ditolak.", "error");
-        stopQrScanner();
-      });
-    }
-
-    function stopQrScanner() {
-      if (CBT_STATE.qrScanner) {
-        CBT_STATE.qrScanner.stop().then(() => {
-          CBT_STATE.qrScanner.clear();
-          document.getElementById('modalScanner').classList.add('hidden');
-        }).catch(() => {
-          document.getElementById('modalScanner').classList.add('hidden');
-        });
-      } else {
-        document.getElementById('modalScanner').classList.add('hidden');
-      }
-    }
-
-    function handleQrScanned(text) {
-      showToast("Kartu Peserta berhasil dipindai!", "info");
-      // Format QR: KODE_LEMBAGA|NISN|NAMA atau NISN saja
-      if (text.includes('|')) {
-        const parts = text.split('|');
-        if (parts.length >= 2) {
-          document.getElementById('loginKodeUnik').value = parts[0].trim();
-          handleKodeUnikChange(parts[0].trim());
-          document.getElementById('loginNisn').value = parts[1].trim();
-        }
-        if (parts.length >= 3) {
-          document.getElementById('loginNama').value = parts[2].trim().toUpperCase();
-        }
-      } else {
-        document.getElementById('loginNisn').value = text.trim();
-      }
     }
 
     /**
