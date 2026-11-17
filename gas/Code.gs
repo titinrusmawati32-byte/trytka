@@ -143,9 +143,23 @@ function doPost(e) {
         response = proktorGetRekapNilai(payload);
         break;
 
+      // Manajemen Akses Ujian & Token
+      case "proktorGetExamSettings":
+        response = proktorGetExamSettings(payload);
+        break;
+      case "proktorSetExamSettings":
+        response = proktorSetExamSettings(payload);
+        break;
+
       // Sisi Siswa (CBT Engine)
       case "siswaVerifyTokenLembaga":
         response = siswaVerifyTokenLembaga(payload);
+        break;
+      case "siswaGetExamPackages":
+        response = siswaGetExamPackages(payload);
+        break;
+      case "siswaVerifyExamToken":
+        response = siswaVerifyExamToken(payload);
         break;
       case "siswaLoginAndGetSoal":
         response = siswaLoginAndGetSoal(payload);
@@ -833,6 +847,182 @@ function proktorGetRekapNilai(payload) {
       terendah: terendah
     },
     data: list
+  };
+}
+
+/**
+ * =========================================================================================
+ * MANAJEMEN AKSES UJIAN, KUNCI ADMIN & TOKEN PENGAWAS
+ * =========================================================================================
+ */
+
+function getSchoolExamSettings(npsn) {
+  const props = PropertiesService.getScriptProperties();
+  const raw = props.getProperty("EXAM_SETTINGS_" + npsn);
+  if (raw) {
+    try {
+      return JSON.parse(raw);
+    } catch(e) {}
+  }
+
+  // Default settings awal
+  return {
+    isExamLocked: false,
+    activeToken: "TKA26",
+    packages: [
+      {
+        idPaket: "LIT",
+        namaPaket: "Paket 1: Literasi Membaca",
+        mapel: "Literasi Membaca",
+        jumlahSoal: 20,
+        durasiMenit: 45,
+        isLocked: false,
+        keterangan: "Bahasa Indonesia & Pemahaman Wacana"
+      },
+      {
+        idPaket: "NUM",
+        namaPaket: "Paket 2: Numerasi Berhitung",
+        mapel: "Numerasi Berhitung",
+        jumlahSoal: 20,
+        durasiMenit: 45,
+        isLocked: false,
+        keterangan: "Matematika & Pemecahan Masalah"
+      },
+      {
+        idPaket: "GABUNGAN",
+        namaPaket: "Paket 3: Try Out Lengkap TKA SD",
+        mapel: "Literasi & Numerasi",
+        jumlahSoal: 40,
+        durasiMenit: 60,
+        isLocked: false,
+        keterangan: "Simulasi Penuh Literasi + Numerasi"
+      }
+    ]
+  };
+}
+
+function setSchoolExamSettings(npsn, settings) {
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty("EXAM_SETTINGS_" + npsn, JSON.stringify(settings));
+}
+
+function proktorGetExamSettings(payload) {
+  const { npsn } = payload;
+  if (!npsn) return { success: false, message: "NPSN wajib diisi." };
+  const settings = getSchoolExamSettings(npsn);
+  return {
+    success: true,
+    data: settings
+  };
+}
+
+function proktorSetExamSettings(payload) {
+  const { npsn, settings } = payload;
+  if (!npsn || !settings) return { success: false, message: "Parameter tidak lengkap." };
+  setSchoolExamSettings(npsn, settings);
+  return {
+    success: true,
+    message: "Pengaturan akses ujian & token berhasil diperbarui.",
+    data: settings
+  };
+}
+
+function siswaGetExamPackages(payload) {
+  const { npsn } = payload;
+  if (!npsn) return { success: false, message: "NPSN wajib diisi." };
+  const settings = getSchoolExamSettings(npsn);
+
+  // Sensor token rahasia sebelum dikirim ke browser siswa
+  const sanitizedPackages = settings.packages.map(p => ({
+    idPaket: p.idPaket,
+    namaPaket: p.namaPaket,
+    mapel: p.mapel,
+    jumlahSoal: p.jumlahSoal,
+    durasiMenit: p.durasiMenit,
+    isLocked: settings.isExamLocked || p.isLocked,
+    keterangan: p.keterangan
+  }));
+
+  return {
+    success: true,
+    isExamLocked: settings.isExamLocked,
+    packages: sanitizedPackages
+  };
+}
+
+function siswaVerifyExamToken(payload) {
+  const { npsn, nisn, idPaket, tokenInput } = payload;
+  if (!npsn || !tokenInput) {
+    return { success: false, message: "Token ujian wajib diisi." };
+  }
+
+  const settings = getSchoolExamSettings(npsn);
+
+  // 1. Cek apakah seluruh ujian sedang dikunci admin
+  if (settings.isExamLocked) {
+    return {
+      success: false,
+      message: "Ujian saat ini masih DIKUNCI oleh Pengawas/Admin. Harap tunggu hingga waktu ujian resmi dibuka."
+    };
+  }
+
+  // Cek apakah paket ini secara spesifik dikunci
+  const targetPkg = settings.packages.find(p => p.idPaket === idPaket);
+  if (targetPkg && targetPkg.isLocked) {
+    return {
+      success: false,
+      message: "Paket ujian ini masih DIKUNCI oleh Pengawas/Admin. Belum waktunya untuk dikerjakan."
+    };
+  }
+
+  // 2. Cek Token Ujian dari Guru
+  const cleanInput = String(tokenInput).trim().toUpperCase();
+  const validToken = String(settings.activeToken || "TKA26").trim().toUpperCase();
+
+  if (cleanInput !== validToken) {
+    return {
+      success: false,
+      message: "Token Ujian salah! Silakan tanyakan token resmi pada Bapak/Ibu Guru pengawas di kelas."
+    };
+  }
+
+  // 3. Ambil Soal Sesuai Paket
+  const ss = getSpreadsheet();
+  const soalSheet = ss.getSheetByName("Soal_" + npsn);
+  let sanitizedSoalList = [];
+
+  if (soalSheet) {
+    const allSoal = sheetToObjects(soalSheet);
+    let filtered = allSoal;
+    if (idPaket === "LIT") {
+      filtered = allSoal.filter(s => String(s.mapel).toLowerCase().includes("literasi"));
+    } else if (idPaket === "NUM") {
+      filtered = allSoal.filter(s => String(s.mapel).toLowerCase().includes("numerasi"));
+    }
+    if (filtered.length === 0) filtered = allSoal;
+
+    sanitizedSoalList = filtered.map((s, index) => ({
+      nomor: index + 1,
+      idSoal: String(s.idSoal),
+      mapel: s.mapel || "Literasi & Numerasi",
+      pertanyaan: s.pertanyaan,
+      gambarUrl: s.gambarUrl || "",
+      opsiA: s.opsiA,
+      opsiB: s.opsiB,
+      opsiC: s.opsiC,
+      opsiD: s.opsiD
+    }));
+  }
+
+  return {
+    success: true,
+    message: "Token ujian valid! Selamat mengerjakan.",
+    paketInfo: targetPkg || {
+      idPaket: idPaket,
+      namaPaket: "Paket Ujian",
+      durasiMenit: 60
+    },
+    soalList: sanitizedSoalList
   };
 }
 

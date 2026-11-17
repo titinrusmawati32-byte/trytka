@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>SiSiswa TKA SD - Portal Asesmen Siswa Cerdas</title>
+  <title>SiSiswa TKA SD - Smart Learning & Asesmen Mandiri</title>
   
   <!-- Tailwind CSS CDN v3.4 -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -16,13 +16,10 @@
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   
-  <!-- QR Scanner: html5-qrcode -->
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-
   <!-- Konfigurasi Mandiri Aplikasi (URL Google Apps Script) -->
   <script src="config.js"></script>
 
-  <!-- Tailwind Configuration -->
+  <!-- Tailwind Configuration Sesuai Mockup Smart Learning -->
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -44,6 +41,15 @@
               700: '#4F46E5',
               800: '#4338CA',
               900: '#3730A3',
+            },
+            smart: {
+              bg: '#F8F6FF',
+              lavender: '#EAE4FE',
+              yellow: '#FEF5D0',
+              peach: '#FFE4E6',
+              sky: '#E0F2FE',
+              lilac: '#EBE5FF',
+              darkDock: '#18181B'
             }
           }
         }
@@ -76,16 +82,12 @@
       background-color: #EEF2FF;
       box-shadow: 0 4px 14px rgba(99, 102, 241, 0.16);
     }
-    .dark .option-card.selected {
-      border-color: #818CF8;
-      background-color: rgba(99, 102, 241, 0.25);
-    }
 
-    /* Floating Bottom Dock Active Indicator */
-    .nav-dock-item.active {
-      background-color: #4F46E5;
+    /* Bottom Dock Active Indicator (Smart Learning Style) */
+    .dock-btn.active {
+      background: linear-gradient(135deg, #9333EA, #EC4899);
       color: #FFFFFF;
-      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+      box-shadow: 0 4px 14px rgba(147, 51, 234, 0.45);
     }
 
     /* Canvas Papan Buram */
@@ -118,7 +120,7 @@
     }
   </style>
 </head>
-<body class="min-h-full bg-[#F7F5FF] dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans antialiased flex flex-col justify-between selection:bg-brand-500 selection:text-white">
+<body class="min-h-full bg-[#F8F6FF] dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans antialiased flex flex-col justify-between selection:bg-brand-500 selection:text-white">
 
   <!-- ========================================================================= -->
   <!-- TOAST NOTIFICATION FLOATING -->
@@ -143,6 +145,48 @@
       <button onclick="closeAntiCheatModal()" class="w-full py-3.5 px-6 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-2xl shadow-lg transition active:scale-95">
         Saya Mengerti & Kembali Mengerjakan
       </button>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: VERIFIKASI TOKEN UJIAN DARI GURU (KETIKA MAU MULAI UJIAN) -->
+  <!-- ========================================================================= -->
+  <div id="modalTokenUjianGuru" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 hidden" onclick="closeModalTokenUjian(event)">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-purple-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200" onclick="event.stopPropagation()">
+      
+      <div class="text-center mb-6">
+        <div class="w-16 h-16 bg-gradient-to-tr from-amber-400 to-amber-500 text-slate-900 rounded-3xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-amber-400/20 text-3xl">
+          🔑
+        </div>
+        <h3 class="text-xl font-extrabold text-slate-900 dark:text-white">Masukkan Token Ujian</h3>
+        <p class="text-xs text-brand-600 dark:text-brand-400 font-bold mt-1" id="tokenModalPaketName">
+          Paket 1: Literasi Membaca
+        </p>
+        <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">
+          Token ujian diumumkan oleh Bapak/Ibu Guru pengawas di kelas saat waktu pengerjaan resmi dimulai.
+        </p>
+      </div>
+
+      <form onsubmit="handleVerifyTokenGuru(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-extrabold text-slate-700 dark:text-slate-200 uppercase tracking-widest text-center mb-1.5">
+            Token Ujian dari Guru
+          </label>
+          <input type="text" id="inputTokenUjianGuru" required maxlength="8" placeholder="Contoh: TKA26"
+                 class="w-full px-4 py-4 bg-purple-50 dark:bg-slate-800 border-2 border-purple-200 dark:border-slate-700 rounded-2xl text-center text-xl font-mono uppercase tracking-widest font-black text-brand-600 dark:text-brand-400 focus:outline-none focus:border-brand-600 focus:bg-white">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 pt-2">
+          <button type="button" onclick="closeModalTokenUjian()" class="py-3.5 px-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold rounded-2xl text-xs transition">
+            Batal
+          </button>
+          <button type="submit" id="btnVerifyTokenGuru" class="py-3.5 px-4 bg-gradient-to-r from-brand-600 to-purple-600 hover:from-brand-700 hover:to-purple-700 active:scale-95 text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-brand-600/30 transition flex items-center justify-center gap-1.5">
+            <span>Mulai Ujian</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+      </form>
+
     </div>
   </div>
 
@@ -346,25 +390,24 @@
   </div>
 
   <!-- ========================================================================= -->
-  <!-- 1. VIEW LOGIN SISWA (HANYA MENGGUNAKAN TOKEN LEMBAGA) -->
+  <!-- 1. VIEW LOGIN SISWA (HANYA TOKEN LEMBAGA) -->
   <!-- ========================================================================= -->
   <section id="viewLogin" class="flex-1 flex flex-col justify-center items-center p-4 sm:p-6 max-w-md mx-auto w-full my-auto">
     
-    <!-- Hero Banner Card (Pastel Welcome) -->
-    <div class="w-full bg-gradient-to-br from-indigo-500 via-purple-600 to-brand-700 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-indigo-500/20 mb-6 text-center relative overflow-hidden">
-      <!-- Decorative background blur -->
-      <div class="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-white/10 blur-xl pointer-events-none"></div>
-      <div class="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-purple-400/20 blur-xl pointer-events-none"></div>
-
-      <!-- Mascot Badge Icon -->
-      <div class="w-20 h-20 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center mx-auto mb-3 shadow-inner border border-white/30 text-4xl">
-        🎓
+    <!-- Hero Banner Card (Pastel Welcome Sesuai Screen 1 Smart Learning) -->
+    <div class="w-full bg-[#EAE4FE] dark:bg-slate-800 rounded-[32px] p-6 sm:p-8 text-slate-900 dark:text-white shadow-sm border border-purple-200/60 mb-5 text-center relative overflow-hidden">
+      <!-- Playful floating sticker badge -->
+      <div class="inline-flex items-center gap-1.5 bg-white/80 dark:bg-slate-700 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-extrabold text-purple-700 dark:text-purple-300 border border-purple-200/50 mb-3 shadow-sm transform -rotate-1">
+        <span>✨</span> <span>Welcome to Smart Learning</span>
       </div>
-      <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
-        Selamat Datang di <span class="text-amber-300">SiSiswa!</span>
+      <div class="text-5xl sm:text-6xl my-2">
+        🧑‍🎓✏️
+      </div>
+      <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+        SiSiswa <span class="text-purple-600 dark:text-purple-400">TKA SD</span>
       </h1>
-      <p class="text-xs sm:text-sm text-purple-100 mt-1 max-w-xs mx-auto">
-        Asesmen Mandiri Try Out TKA SD • Literasi & Numerasi Koorwil Ambulu
+      <p class="text-xs text-slate-600 dark:text-slate-300 mt-1 max-w-xs mx-auto font-medium">
+        Asesmen Mandiri Try Out Literasi & Numerasi • Koorwil Ambulu
       </p>
     </div>
 
@@ -418,41 +461,43 @@
   </section>
 
   <!-- ========================================================================= -->
-  <!-- 2. SHELL APLIKASI SISWA (DENGAN 4 TAB & BOTTOM NAVIGATION DOCK) -->
+  <!-- 2. SHELL APLIKASI SISWA (DESAIN PERSIS MOCKUP SMART LEARNING) -->
   <!-- ========================================================================= -->
-  <div id="viewAppShell" class="flex-1 flex flex-col w-full h-full pb-24 hidden">
+  <div id="viewAppShell" class="flex-1 flex flex-col w-full h-full pb-28 hidden">
     
-    <!-- Top Sticky Header: Profile Siswa & Logout -->
-    <header class="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-purple-100 dark:border-slate-800 px-4 py-3">
-      <div class="max-w-4xl mx-auto flex items-center justify-between gap-3">
+    <!-- Top Sticky Header: Profile Siswa & Notifikasi Sesuai Gambar Referensi -->
+    <header class="sticky top-0 z-30 bg-[#F8F6FF]/90 dark:bg-slate-900/90 backdrop-blur-md px-4 sm:px-6 py-3.5 border-b border-purple-100/60 dark:border-slate-800">
+      <div class="max-w-md sm:max-w-2xl mx-auto flex items-center justify-between gap-3">
         
-        <!-- Left: Student Avatar & Greeting -->
+        <!-- Left: Avatar Circle + Hey, Student -->
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-600 to-purple-500 text-white flex items-center justify-center text-lg font-bold shadow-md shadow-brand-600/20">
-            👦
+          <div class="w-11 h-11 rounded-full bg-gradient-to-tr from-purple-400 to-indigo-500 p-0.5 shadow-md shadow-purple-500/20">
+            <div class="w-full h-full rounded-full bg-white dark:bg-slate-800 flex items-center justify-center text-xl overflow-hidden">
+              👦
+            </div>
           </div>
           <div>
             <div class="flex items-center gap-1.5">
-              <span class="text-xs text-slate-500">Halo,</span>
-              <strong id="shellStudentName" class="text-sm font-bold text-slate-900 dark:text-white truncate max-w-[150px] sm:max-w-[220px]">Siswa</strong>
-              <button onclick="openEditIdentitasModal()" title="Ubah Identitas" class="text-xs text-brand-600 hover:text-brand-700 ml-1">
+              <span class="text-xs font-medium text-slate-500">Hey,</span>
+              <strong id="shellStudentName" class="text-sm font-extrabold text-slate-900 dark:text-white truncate max-w-[140px] sm:max-w-[200px]">Siswa</strong>
+              <button onclick="openEditIdentitasModal()" title="Ubah Identitas" class="text-xs text-brand-600 hover:text-brand-700 ml-0.5">
                 <i class="fa-solid fa-pen-to-square"></i>
               </button>
             </div>
-            <div id="shellSchoolInfo" class="text-[11px] text-purple-600 dark:text-purple-400 font-semibold truncate max-w-[180px] sm:max-w-[320px]">
-              SDN Sumberejo 04
+            <div id="shellSchoolInfo" class="text-[11px] font-semibold text-purple-600 dark:text-purple-400 truncate max-w-[180px] sm:max-w-[280px]">
+              SDN Sumberejo 04 • Kelas VI
             </div>
           </div>
         </div>
 
-        <!-- Right: Status Badge & Logout -->
+        <!-- Right: Notification Bell & Logout -->
         <div class="flex items-center gap-2">
-          <div id="shellExamStatusBadge" class="hidden sm:inline-flex items-center gap-1 px-3 py-1 bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 rounded-full text-xs font-bold border border-purple-200 dark:border-purple-800">
-            <i class="fa-solid fa-circle-check text-emerald-500"></i>
-            <span id="shellStatusText">Siap Ujian</span>
+          <div class="w-9 h-9 rounded-full bg-white dark:bg-slate-800 border border-purple-100 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 relative shadow-sm">
+            <i class="fa-regular fa-bell text-sm"></i>
+            <span class="w-2 h-2 rounded-full bg-rose-500 absolute top-2 right-2"></span>
           </div>
-          
-          <button onclick="confirmLogoutStudent()" title="Keluar / Ganti Akun" class="w-9 h-9 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 hover:text-rose-600 text-slate-600 dark:text-slate-300 flex items-center justify-center transition">
+
+          <button onclick="confirmLogoutStudent()" title="Keluar / Ganti Akun" class="w-9 h-9 rounded-full bg-white dark:bg-slate-800 hover:bg-rose-50 hover:text-rose-600 text-slate-600 dark:text-slate-300 border border-purple-100 dark:border-slate-700 flex items-center justify-center transition shadow-sm">
             <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
           </button>
         </div>
@@ -460,195 +505,399 @@
       </div>
     </header>
 
-    <!-- TAB CONTAINER 1: DASHBOARD (BERANDA SISWA) -->
-    <main id="tabDashboard" class="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 space-y-5">
+    <!-- ======================================================================= -->
+    <!-- TAB 1: DASHBOARD / BERANDA (PERSIS SCREEN 2 & 3 DI REFERENSI) -->
+    <!-- ======================================================================= -->
+    <main id="tabDashboard" class="flex-1 max-w-md sm:max-w-2xl w-full mx-auto p-4 sm:p-6 space-y-6">
       
-      <!-- Hero Banner (Inspirasi Gambar 1 - Olympiad Mastery Hub) -->
-      <div class="bg-gradient-to-r from-violet-600 via-indigo-600 to-brand-600 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-indigo-500/20 relative overflow-hidden flex flex-col sm:flex-row items-center justify-between gap-6">
-        <div class="space-y-2 text-center sm:text-left z-10">
-          <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-extrabold uppercase tracking-wider text-amber-300">
-            <i class="fa-solid fa-award"></i> Asesmen TKA SD 2026
-          </div>
-          <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight leading-tight">
-            Ruang Asesmen Mandiri SD
+      <!-- HERO CARD: OLYMPIAD MASTERY HUB (PERSIS GAMBAR REFERENSI KEDUA) -->
+      <div class="w-full bg-[#EAE4FE] dark:bg-slate-800/80 rounded-[32px] p-6 text-slate-900 dark:text-white relative overflow-hidden shadow-sm border border-purple-200/50 dark:border-slate-700">
+        
+        <!-- Content Area -->
+        <div class="relative z-10 max-w-[200px] sm:max-w-[280px] space-y-2">
+          <h2 class="text-xl sm:text-2xl font-black tracking-tight leading-tight text-slate-900 dark:text-white">
+            Olympiad <br><span class="text-purple-700 dark:text-purple-300">Mastery Hub</span>
           </h2>
-          <p class="text-xs sm:text-sm text-purple-100 max-w-md">
-            Uji kemampuan literasi membaca dan numerasi berhitungmu secara mandiri, jujur, dan menyenangkan!
+          <p class="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+            Smart Olympiads Built For Faster Learning Success.
           </p>
           <div class="pt-2">
-            <button onclick="switchToExamTab()" id="btnHeroAction" class="px-6 py-3.5 bg-white text-brand-700 hover:bg-amber-300 hover:text-slate-900 font-extrabold rounded-2xl shadow-lg transition active:scale-95 inline-flex items-center gap-2 text-sm">
-              <i class="fa-solid fa-pen-nib"></i>
-              <span id="heroActionText">Mulai Kerjakan Ujian Sekarang</span>
+            <button onclick="openTab('ujian')" class="px-5 py-2.5 bg-black hover:bg-slate-900 active:scale-95 text-white font-extrabold rounded-full text-xs shadow-md transition flex items-center gap-2">
+              <span>Start</span>
+              <i class="fa-solid fa-arrow-right text-[10px]"></i>
             </button>
           </div>
         </div>
 
-        <!-- Trophy Illustration Badge -->
-        <div class="w-32 h-32 sm:w-40 sm:h-40 rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-6xl shadow-inner shrink-0 animate-pulse">
-          🏆
-        </div>
-      </div>
-
-      <!-- Stat Info Cards (3 Grid) -->
-      <div class="grid grid-cols-3 gap-3">
-        <div class="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 border border-purple-100 dark:border-slate-800 shadow-sm text-center">
-          <div class="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-brand-600 flex items-center justify-center mx-auto mb-2 text-base">
-            <i class="fa-solid fa-book-bookmark"></i>
-          </div>
-          <div id="dashTotalSoal" class="text-xl sm:text-2xl font-extrabold font-mono text-slate-900 dark:text-white">40</div>
-          <div class="text-[11px] font-semibold text-slate-500 mt-0.5">Total Soal</div>
-        </div>
-
-        <div class="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 border border-purple-100 dark:border-slate-800 shadow-sm text-center">
-          <div class="w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 flex items-center justify-center mx-auto mb-2 text-base">
-            <i class="fa-solid fa-clock"></i>
-          </div>
-          <div class="text-xl sm:text-2xl font-extrabold font-mono text-slate-900 dark:text-white">60</div>
-          <div class="text-[11px] font-semibold text-slate-500 mt-0.5">Menit Waktu</div>
-        </div>
-
-        <div class="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 border border-purple-100 dark:border-slate-800 shadow-sm text-center">
-          <div class="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center mx-auto mb-2 text-base">
-            <i class="fa-solid fa-bullseye"></i>
-          </div>
-          <div class="text-xl sm:text-2xl font-extrabold font-mono text-slate-900 dark:text-white">75</div>
-          <div class="text-[11px] font-semibold text-slate-500 mt-0.5">Target KKM</div>
-        </div>
-      </div>
-
-      <!-- Detail Sesi & Panduan Siswa -->
-      <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-purple-100 dark:border-slate-800 shadow-sm">
-        <h3 class="text-base font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-          <i class="fa-solid fa-lightbulb text-amber-500"></i> Panduan Ujian untuk Siswa Cerdas
-        </h3>
-        <div class="space-y-2.5 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-          <div class="flex items-start gap-2.5">
-            <span class="w-5 h-5 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center font-bold shrink-0 text-[10px]">1</span>
-            <p><strong>Identitas Lengkap:</strong> Pastikan Nama, NISN, dan NIS sekolahmu sudah sesuai.</p>
-          </div>
-          <div class="flex items-start gap-2.5">
-            <span class="w-5 h-5 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center font-bold shrink-0 text-[10px]">2</span>
-            <p><strong>Papan Buram Digital:</strong> Butuh menghitung coret-coret? Gunakan fitur <em>Papan Buram</em> di menu ujian.</p>
-          </div>
-          <div class="flex items-start gap-2.5">
-            <span class="w-5 h-5 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center font-bold shrink-0 text-[10px]">3</span>
-            <p><strong>Otomatis Tersimpan:</strong> Jawabanmu otomatis tersimpan di server sekolah setiap kali memilih opsi.</p>
-          </div>
-          <div class="flex items-start gap-2.5">
-            <span class="w-5 h-5 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center font-bold shrink-0 text-[10px]">4</span>
-            <p><strong>Pembahasan & Nilai:</strong> Setelah mengumpulkan ujian, kamu bisa langsung melihat skor di menu <strong>Nilai</strong> dan kunci jawaban di menu <strong>Pembahasan</strong>!</p>
-          </div>
-        </div>
-      </div>
-
-    </main>
-
-    <!-- TAB CONTAINER 2: MENU UJIAN (RUANG CBT) -->
-    <main id="tabUjian" class="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 flex flex-col justify-between hidden">
-      
-      <!-- Top Sticky Bar Ujian: Timer, Papan Buram & Palet -->
-      <div class="bg-white dark:bg-slate-900 rounded-3xl p-3.5 sm:p-4 shadow-sm border border-purple-100 dark:border-slate-800 mb-4 flex items-center justify-between gap-2">
-        
-        <!-- Nomor Soal Indikator -->
-        <div class="flex items-center gap-2">
-          <span class="px-3 py-1 bg-brand-600 text-white font-extrabold text-xs rounded-xl shadow-sm">
-            No. <span id="currentQNumber">1</span>
-          </span>
-          <span id="questionTopic" class="text-xs text-slate-500 font-semibold hidden sm:inline">Literasi & Numerasi</span>
-        </div>
-
-        <!-- Timer Countdown Widget -->
-        <div id="timerContainer" class="flex items-center gap-1.5 bg-purple-50 dark:bg-slate-800 px-3.5 py-1.5 rounded-2xl border border-purple-200 dark:border-slate-700">
-          <i class="fa-regular fa-clock text-brand-600 text-xs"></i>
-          <span id="examTimer" class="font-mono text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100 tracking-wider">60:00</span>
-        </div>
-
-        <!-- Tools: Papan Buram, Font Resizer & Palet -->
-        <div class="flex items-center gap-1.5">
-          <!-- Papan Buram Canvas -->
-          <button onclick="openScratchpad()" title="Buka Papan Buram Coret-Coret" class="px-2.5 py-1.5 bg-amber-50 dark:bg-amber-950/50 hover:bg-amber-100 text-amber-700 dark:text-amber-300 font-bold text-xs rounded-xl flex items-center gap-1 transition">
-            <i class="fa-solid fa-pen-fancy text-xs"></i>
-            <span class="hidden sm:inline">Buram</span>
-          </button>
-
-          <!-- Font Size -->
-          <button onclick="toggleFontSize()" title="Ubah Ukuran Huruf" class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center justify-center transition">
-            <span id="fontLabel">A</span>
-          </button>
-
-          <!-- Drawer Palette Button -->
-          <button onclick="openPaletteModal()" class="px-3 py-1.5 bg-brand-50 dark:bg-brand-950/60 hover:bg-brand-100 text-brand-600 font-bold text-xs rounded-xl flex items-center gap-1.5 transition">
-            <i class="fa-solid fa-grip"></i>
-            <span class="hidden sm:inline">Palet</span>
-            <span id="paletteBadge" class="bg-brand-600 text-white rounded-full px-1.5 py-0.2 text-[10px]">1/3</span>
-          </button>
+        <!-- Trophy Mascot Illustration on the Right -->
+        <div class="absolute right-2 -bottom-1 sm:right-6 sm:bottom-0 flex items-end select-none pointer-events-none">
+          <div class="text-6xl sm:text-7xl mr-2 mb-2 animate-bounce">🏆</div>
+          <div class="text-6xl sm:text-7xl">👧</div>
         </div>
 
       </div>
 
-      <!-- Question Card Container -->
-      <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-8 shadow-sm border border-purple-100 dark:border-slate-800 mb-4 transition-all">
-        
-        <!-- Meta Soal & Ragu Toggle -->
-        <div class="flex justify-between items-center pb-4 mb-4 border-b border-slate-100 dark:border-slate-800">
-          <span class="text-xs font-semibold text-slate-500">Pilihlah salah satu jawaban yang paling tepat:</span>
-
-          <!-- Ragu-ragu checkbox toggle -->
-          <button onclick="toggleRaguRagu()" id="btnRaguToggle"
-                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 text-xs font-bold transition">
-            <i id="raguIcon" class="fa-regular fa-square"></i>
-            <span>Ragu-Ragu</span>
-          </button>
+      <!-- SECTION: YOUR ACTIVITY / PAKET UJIAN TERSEDIA (PERSIS SCREEN 2 DI REFERENSI) -->
+      <div class="space-y-3.5">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-extrabold text-slate-900 dark:text-white">Your Activity</h3>
+          <button onclick="openTab('ujian')" class="text-xs font-bold text-slate-500 hover:text-brand-600">See All &rarr;</button>
         </div>
 
-        <!-- Question Body Text -->
-        <div id="questionTextContainer" class="font-size-md text-slate-800 dark:text-slate-100 mb-6 leading-relaxed select-text font-medium">
-          <!-- Question text injected here -->
-        </div>
-
-        <!-- Optional Illustration Image -->
-        <div id="questionImageContainer" class="mb-6 hidden text-center">
-          <img id="questionImage" src="" alt="Ilustrasi Soal" class="max-h-64 rounded-2xl mx-auto border border-slate-200 dark:border-slate-700 shadow-sm object-contain">
-        </div>
-
-        <!-- Options Container (4 Cards A, B, C, D) -->
-        <div id="optionsContainer" class="space-y-3">
-          <!-- Generated by JavaScript -->
-        </div>
-
-      </div>
-
-      <!-- Action Nav Buttons for Question -->
-      <div class="bg-white dark:bg-slate-900 rounded-3xl p-3 sm:p-4 shadow-sm border border-purple-100 dark:border-slate-800 flex items-center justify-between gap-3">
-        <button onclick="navPrevQuestion()" id="btnPrevQ"
-                class="px-5 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-sm transition disabled:opacity-40 disabled:pointer-events-none flex items-center gap-2">
-          <i class="fa-solid fa-arrow-left"></i>
-          <span class="hidden sm:inline">Sebelumnya</span>
-        </button>
-
-        <div class="text-xs font-mono text-slate-500 font-semibold">
-          <span id="navCurrentNum">1</span> / <span id="navTotalNum">3</span>
-        </div>
-
-        <div class="flex gap-2">
-          <button onclick="navNextQuestion()" id="btnNextQ"
-                  class="px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm shadow-lg shadow-brand-600/30 transition flex items-center gap-2">
-            <span>Berikutnya</span>
-            <i class="fa-solid fa-arrow-right"></i>
-          </button>
+        <div class="space-y-3">
           
-          <button onclick="openConfirmModal()" id="btnFinishExam"
-                  class="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 transition flex items-center gap-2 hidden">
-            <span>Selesai Ujian</span>
-            <i class="fa-solid fa-check-double"></i>
-          </button>
+          <!-- Card 1: Literasi Membaca (Pastel Lavender Card with Book) -->
+          <div onclick="selectPackageForExam('LIT')" class="w-full bg-[#EAE4FE] dark:bg-slate-800/60 rounded-[28px] p-4 sm:p-5 flex items-center justify-between gap-4 cursor-pointer hover:shadow-md transition active:scale-[0.99] border border-purple-200/50 dark:border-slate-700">
+            <div class="flex items-center gap-3.5">
+              <!-- Book Illustration Box -->
+              <div class="w-16 h-16 rounded-2xl bg-white/70 dark:bg-slate-700 flex items-center justify-center text-3xl shadow-sm shrink-0">
+                📖
+              </div>
+              <div>
+                <h4 class="text-sm font-extrabold text-slate-900 dark:text-white">Paket 1: Literasi Membaca</h4>
+                <div class="flex items-center gap-1.5 mt-1">
+                  <div class="flex -space-x-1.5 overflow-hidden">
+                    <span class="inline-block w-4 h-4 rounded-full bg-purple-400 text-[8px] text-white text-center">👦</span>
+                    <span class="inline-block w-4 h-4 rounded-full bg-pink-400 text-[8px] text-white text-center">👧</span>
+                    <span class="inline-block w-4 h-4 rounded-full bg-indigo-500 text-[8px] text-white text-center font-bold">30+</span>
+                  </div>
+                  <span class="text-[11px] font-bold text-slate-600 dark:text-slate-300">20 Soal • 45 Menit</span>
+                </div>
+                <div class="mt-1.5">
+                  <span id="badgeStatus_LIT" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                    🟢 Ujian Dibuka
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dark Circle Action Button with Arrow -->
+            <div class="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center text-sm shadow shrink-0">
+              <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+            </div>
+          </div>
+
+          <!-- Card 2: Numerasi Berhitung (Pastel Soft Yellow Card with Alarm Clock) -->
+          <div onclick="selectPackageForExam('NUM')" class="w-full bg-[#FEF5D0] dark:bg-slate-800/60 rounded-[28px] p-4 sm:p-5 flex items-center justify-between gap-4 cursor-pointer hover:shadow-md transition active:scale-[0.99] border border-amber-200/50 dark:border-slate-700">
+            <div class="flex items-center gap-3.5">
+              <!-- Clock/Math Illustration Box -->
+              <div class="w-16 h-16 rounded-2xl bg-white/70 dark:bg-slate-700 flex items-center justify-center text-3xl shadow-sm shrink-0">
+                ⏰
+              </div>
+              <div>
+                <h4 class="text-sm font-extrabold text-slate-900 dark:text-white">Paket 2: Numerasi Berhitung</h4>
+                <div class="flex items-center gap-1.5 mt-1">
+                  <div class="flex -space-x-1.5 overflow-hidden">
+                    <span class="inline-block w-4 h-4 rounded-full bg-amber-400 text-[8px] text-white text-center">👦</span>
+                    <span class="inline-block w-4 h-4 rounded-full bg-orange-400 text-[8px] text-white text-center">👧</span>
+                    <span class="inline-block w-4 h-4 rounded-full bg-yellow-500 text-[8px] text-white text-center font-bold">40+</span>
+                  </div>
+                  <span class="text-[11px] font-bold text-slate-600 dark:text-slate-300">20 Soal • 45 Menit</span>
+                </div>
+                <div class="mt-1.5">
+                  <span id="badgeStatus_NUM" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                    🟢 Ujian Dibuka
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dark Circle Action Button with Arrow -->
+            <div class="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center text-sm shadow shrink-0">
+              <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+            </div>
+          </div>
+
+          <!-- Card 3: Paket Gabungan (Pastel Sky/Peach Card with Trophy) -->
+          <div onclick="selectPackageForExam('GABUNGAN')" class="w-full bg-[#E0F2FE] dark:bg-slate-800/60 rounded-[28px] p-4 sm:p-5 flex items-center justify-between gap-4 cursor-pointer hover:shadow-md transition active:scale-[0.99] border border-sky-200/50 dark:border-slate-700">
+            <div class="flex items-center gap-3.5">
+              <!-- Trophy Illustration Box -->
+              <div class="w-16 h-16 rounded-2xl bg-white/70 dark:bg-slate-700 flex items-center justify-center text-3xl shadow-sm shrink-0">
+                🎯
+              </div>
+              <div>
+                <h4 class="text-sm font-extrabold text-slate-900 dark:text-white">Paket 3: Try Out Lengkap TKA SD</h4>
+                <div class="flex items-center gap-1.5 mt-1">
+                  <span class="text-[11px] font-bold text-slate-600 dark:text-slate-300">40 Soal • 60 Menit</span>
+                </div>
+                <div class="mt-1.5">
+                  <span id="badgeStatus_GABUNGAN" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                    🟢 Ujian Dibuka
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center text-sm shadow shrink-0">
+              <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- SECTION: LEARNING PLAN (3 SQUARE PASTEL CARDS PERSIS SCREEN 3 DI REFERENSI) -->
+      <div class="space-y-3">
+        <h3 class="text-sm font-extrabold text-slate-900 dark:text-white">Learning Plan</h3>
+        
+        <div class="grid grid-cols-3 gap-3">
+          <!-- Lilac Card: Literasi -->
+          <div class="bg-[#EBE5FF] dark:bg-slate-800 rounded-3xl p-3.5 flex flex-col justify-between h-28 border border-purple-200/40">
+            <div class="flex justify-between items-start">
+              <span class="text-xl">🎓</span>
+              <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-500"></i>
+            </div>
+            <div>
+              <div class="text-[10px] font-bold text-slate-500">Literasi</div>
+              <div class="text-sm font-extrabold text-slate-900 dark:text-white">20 Soal</div>
+            </div>
+          </div>
+
+          <!-- Lavender Card: Numerasi -->
+          <div class="bg-[#DDD6FE] dark:bg-slate-800 rounded-3xl p-3.5 flex flex-col justify-between h-28 border border-purple-300/40">
+            <div class="flex justify-between items-start">
+              <span class="text-xl">📖</span>
+              <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-500"></i>
+            </div>
+            <div>
+              <div class="text-[10px] font-bold text-slate-500">Numerasi</div>
+              <div class="text-sm font-extrabold text-slate-900 dark:text-white">20 Soal</div>
+            </div>
+          </div>
+
+          <!-- Pastel Yellow Card: Target KKM -->
+          <div class="bg-[#FEF3C7] dark:bg-slate-800 rounded-3xl p-3.5 flex flex-col justify-between h-28 border border-amber-200/40">
+            <div class="flex justify-between items-start">
+              <span class="text-xl">🎯</span>
+              <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-500"></i>
+            </div>
+            <div>
+              <div class="text-[10px] font-bold text-slate-500">Target KKM</div>
+              <div class="text-sm font-extrabold text-slate-900 dark:text-white">Nilai 75</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION: AVERAGE PROGRESS (PERSIS SCREEN 3 DI REFERENSI) -->
+      <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-purple-100 dark:border-slate-800 shadow-sm space-y-3">
+        <div class="flex justify-between items-center">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center text-brand-600">
+              <i class="fa-solid fa-chart-line text-xs"></i>
+            </div>
+            <span class="text-xs font-extrabold text-slate-900 dark:text-white">Average Progress</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-black font-mono text-slate-900 dark:text-white" id="progressPercentage">78%</span>
+            <div class="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-[10px]">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Custom Pastel Gradient Progress Slider -->
+        <div class="relative w-full h-4 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden p-0.5">
+          <div class="h-full bg-gradient-to-r from-purple-300 via-pink-300 to-amber-200 rounded-full" style="width: 78%;"></div>
+        </div>
+      </div>
+
+      <!-- SECTION: PROGRESS LEARNING (BAR CHART PERSIS SCREEN 3 DI REFERENSI) -->
+      <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-purple-100 dark:border-slate-800 shadow-sm space-y-4">
+        <div class="flex justify-between items-center">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-full bg-purple-50 dark:bg-slate-800 flex items-center justify-center text-brand-600">
+              <i class="fa-solid fa-chart-simple text-xs"></i>
+            </div>
+            <div>
+              <h4 class="text-xs font-extrabold text-slate-900 dark:text-white">Progress Learning</h4>
+              <p class="text-[10px] text-slate-500 font-medium">Latihan Pekan Ini • 04hr 54min</p>
+            </div>
+          </div>
+          <div class="text-slate-400">
+            <i class="fa-solid fa-ellipsis-vertical text-xs"></i>
+          </div>
+        </div>
+
+        <!-- Bar Chart: Sun to Sat -->
+        <div class="flex items-end justify-between pt-8 pb-1 px-1 gap-2 h-44 border-b border-dashed border-slate-100 dark:border-slate-800">
+          <!-- Sun -->
+          <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+            <div class="w-full max-w-[26px] bg-purple-50 dark:bg-slate-800 rounded-full h-[35%] transition hover:bg-purple-200"></div>
+            <span class="text-[10px] font-bold text-slate-400">Sun</span>
+          </div>
+          <!-- Mon -->
+          <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+            <div class="w-full max-w-[26px] bg-purple-50 dark:bg-slate-800 rounded-full h-[55%] transition hover:bg-purple-200"></div>
+            <span class="text-[10px] font-bold text-slate-400">Mon</span>
+          </div>
+          <!-- Tue -->
+          <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+            <div class="w-full max-w-[26px] bg-purple-50 dark:bg-slate-800 rounded-full h-[65%] transition hover:bg-purple-200"></div>
+            <span class="text-[10px] font-bold text-slate-400">Tue</span>
+          </div>
+          <!-- Wed -->
+          <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+            <div class="w-full max-w-[26px] bg-purple-50 dark:bg-slate-800 rounded-full h-[80%] transition hover:bg-purple-200"></div>
+            <span class="text-[10px] font-bold text-slate-400">Wed</span>
+          </div>
+          <!-- Thr (Highlight Bar with 4.5hr tooltip pill) -->
+          <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end relative">
+            <div class="absolute -top-7 px-2 py-0.5 bg-black text-white text-[9px] font-extrabold rounded-full shadow">
+              4.5hr
+            </div>
+            <div class="w-full max-w-[26px] bg-gradient-to-t from-purple-400 to-pink-300 border-2 border-purple-500 rounded-full h-[100%] shadow-md"></div>
+            <span class="text-[10px] font-extrabold text-purple-700 dark:text-purple-300">Thr</span>
+          </div>
+          <!-- Fri -->
+          <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+            <div class="w-full max-w-[26px] bg-purple-50 dark:bg-slate-800 rounded-full h-[60%] transition hover:bg-purple-200"></div>
+            <span class="text-[10px] font-bold text-slate-400">Fri</span>
+          </div>
+          <!-- Sat -->
+          <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+            <div class="w-full max-w-[26px] bg-purple-50 dark:bg-slate-800 rounded-full h-[40%] transition hover:bg-purple-200"></div>
+            <span class="text-[10px] font-bold text-slate-400">Sat</span>
+          </div>
         </div>
       </div>
 
     </main>
 
-    <!-- TAB CONTAINER 3: MENU PEMBAHASAN -->
-    <main id="tabPembahasan" class="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 space-y-4 hidden">
+    <!-- ======================================================================= -->
+    <!-- TAB 2: MENU UJIAN (KATALOG PAKET + RUANG CBT ENGINE) -->
+    <!-- ======================================================================= -->
+    <main id="tabUjian" class="flex-1 max-w-md sm:max-w-2xl w-full mx-auto p-4 sm:p-6 flex flex-col justify-between hidden">
+      
+      <!-- SUB-VIEW A: KATALOG PAKET UJIAN & STATUS KUNCI ADMIN -->
+      <div id="subViewPaketUjian" class="space-y-4">
+        
+        <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-purple-100 dark:border-slate-800 shadow-sm flex items-center justify-between">
+          <div>
+            <h3 class="font-extrabold text-base text-slate-900 dark:text-white">Katalog Paket Ujian</h3>
+            <p class="text-xs text-slate-500">Pilih paket ujian yang dibuka oleh Bapak/Ibu Guru.</p>
+          </div>
+          <button onclick="refreshExamPackages()" class="w-9 h-9 rounded-2xl bg-purple-50 dark:bg-slate-800 text-brand-600 flex items-center justify-center text-xs">
+            <i class="fa-solid fa-rotate"></i>
+          </button>
+        </div>
+
+        <!-- Warning Alert jika Admin Mengunci Semua Ujian -->
+        <div id="alertExamGlobalLocked" class="hidden bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-2xl p-4 text-xs text-rose-700 dark:text-rose-300 flex items-center gap-3">
+          <i class="fa-solid fa-lock text-rose-600 text-xl"></i>
+          <div>
+            <strong class="font-bold">Ujian Saat Ini Dikunci oleh Pengawas!</strong>
+            <p class="text-[11px] mt-0.5">Belum waktunya untuk mengerjakan. Harap tunggu hingga waktu resmi dimulai.</p>
+          </div>
+        </div>
+
+        <!-- Daftar Paket Ujian Cards -->
+        <div id="examPackagesListContainer" class="space-y-3">
+          <!-- Injected via JavaScript -->
+        </div>
+
+      </div>
+
+      <!-- SUB-VIEW B: RUANG PENGERJAAN CBT ENGINE (SETELAH TOKEN VALID) -->
+      <div id="subViewCbtRoom" class="space-y-4 hidden flex-1 flex flex-col justify-between">
+        
+        <!-- Top Bar Ujian: Timer, Papan Buram & Palet -->
+        <div class="bg-white dark:bg-slate-900 rounded-3xl p-3.5 sm:p-4 shadow-sm border border-purple-100 dark:border-slate-800 flex items-center justify-between gap-2">
+          
+          <div class="flex items-center gap-2">
+            <span class="px-3 py-1 bg-brand-600 text-white font-extrabold text-xs rounded-xl shadow-sm">
+              No. <span id="currentQNumber">1</span>
+            </span>
+            <span id="questionTopic" class="text-xs text-slate-500 font-semibold hidden sm:inline">Literasi & Numerasi</span>
+          </div>
+
+          <!-- Timer Countdown Widget -->
+          <div id="timerContainer" class="flex items-center gap-1.5 bg-purple-50 dark:bg-slate-800 px-3.5 py-1.5 rounded-2xl border border-purple-200 dark:border-slate-700">
+            <i class="fa-regular fa-clock text-brand-600 text-xs"></i>
+            <span id="examTimer" class="font-mono text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100 tracking-wider">60:00</span>
+          </div>
+
+          <!-- Tools: Papan Buram, Font Resizer & Palet -->
+          <div class="flex items-center gap-1.5">
+            <button onclick="openScratchpad()" title="Papan Buram Coret-Coret" class="px-2.5 py-1.5 bg-amber-50 dark:bg-amber-950/50 hover:bg-amber-100 text-amber-700 dark:text-amber-300 font-bold text-xs rounded-xl flex items-center gap-1 transition">
+              <i class="fa-solid fa-pen-fancy text-xs"></i>
+              <span class="hidden sm:inline">Buram</span>
+            </button>
+
+            <button onclick="toggleFontSize()" title="Ubah Ukuran Huruf" class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center justify-center transition">
+              <span id="fontLabel">A</span>
+            </button>
+
+            <button onclick="openPaletteModal()" class="px-3 py-1.5 bg-brand-50 dark:bg-brand-950/60 hover:bg-brand-100 text-brand-600 font-bold text-xs rounded-xl flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-grip"></i>
+              <span id="paletteBadge" class="bg-brand-600 text-white rounded-full px-1.5 py-0.2 text-[10px]">1/3</span>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Question Card Container -->
+        <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-7 shadow-sm border border-purple-100 dark:border-slate-800 transition-all flex-1">
+          
+          <div class="flex justify-between items-center pb-3 mb-3 border-b border-slate-100 dark:border-slate-800">
+            <span class="text-xs font-semibold text-slate-500">Pilihlah salah satu jawaban yang benar:</span>
+
+            <button onclick="toggleRaguRagu()" id="btnRaguToggle"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 text-xs font-bold transition">
+              <i id="raguIcon" class="fa-regular fa-square"></i>
+              <span>Ragu-Ragu</span>
+            </button>
+          </div>
+
+          <div id="questionTextContainer" class="font-size-md text-slate-800 dark:text-slate-100 mb-6 leading-relaxed select-text font-medium">
+            <!-- Question text injected here -->
+          </div>
+
+          <div id="questionImageContainer" class="mb-6 hidden text-center">
+            <img id="questionImage" src="" alt="Ilustrasi Soal" class="max-h-60 rounded-2xl mx-auto border border-slate-200 dark:border-slate-700 shadow-sm object-contain">
+          </div>
+
+          <div id="optionsContainer" class="space-y-3">
+            <!-- Options A, B, C, D -->
+          </div>
+
+        </div>
+
+        <!-- Action Nav Buttons for Question -->
+        <div class="bg-white dark:bg-slate-900 rounded-3xl p-3 sm:p-4 shadow-sm border border-purple-100 dark:border-slate-800 flex items-center justify-between gap-3">
+          <button onclick="navPrevQuestion()" id="btnPrevQ"
+                  class="px-5 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-sm transition disabled:opacity-40 disabled:pointer-events-none flex items-center gap-2">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span class="hidden sm:inline">Sebelumnya</span>
+          </button>
+
+          <div class="text-xs font-mono text-slate-500 font-semibold">
+            <span id="navCurrentNum">1</span> / <span id="navTotalNum">3</span>
+          </div>
+
+          <div class="flex gap-2">
+            <button onclick="navNextQuestion()" id="btnNextQ"
+                    class="px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm shadow-lg shadow-brand-600/30 transition flex items-center gap-2">
+              <span>Berikutnya</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+            
+            <button onclick="openConfirmModal()" id="btnFinishExam"
+                    class="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 transition flex items-center gap-2 hidden">
+              <span>Selesai Ujian</span>
+              <i class="fa-solid fa-check-double"></i>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+
+    <!-- ======================================================================= -->
+    <!-- TAB 3: MENU PEMBAHASAN -->
+    <!-- ======================================================================= -->
+    <main id="tabPembahasan" class="flex-1 max-w-md sm:max-w-2xl w-full mx-auto p-4 sm:p-6 space-y-4 hidden">
       
       <!-- Locked State Notice -->
       <div id="pembahasanLockedState" class="bg-white dark:bg-slate-900 rounded-3xl p-8 sm:p-12 text-center border border-purple-100 dark:border-slate-800 shadow-sm">
@@ -660,23 +909,21 @@
           Kunci jawaban dan pembahasan soal akan otomatis terbuka setelah kamu menyelesaikan dan mengumpulkan ujian.
         </p>
         <button onclick="openTab('ujian')" class="px-6 py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-2xl shadow-lg transition text-xs">
-          Kembali Kerjakan Ujian &rarr;
+          Buka Menu Ujian &rarr;
         </button>
       </div>
 
       <!-- Unlocked State Container -->
       <div id="pembahasanUnlockedState" class="space-y-4 hidden">
         
-        <!-- Summary Header Bar -->
         <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-purple-100 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
-            <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <i class="fa-solid fa-book-open-reader text-brand-600"></i> Review Kunci & Pembahasan Soal
+            <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <i class="fa-solid fa-book-open-reader text-brand-600"></i> Review Kunci & Pembahasan
             </h3>
             <p class="text-xs text-slate-500">Pelajari pembahasan setiap butir soal untuk memperdalam pemahamanmu.</p>
           </div>
 
-          <!-- Filter Pills -->
           <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl text-xs font-bold">
             <button onclick="filterPembahasan('ALL')" id="filterAll" class="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-700 shadow-sm text-brand-600 font-extrabold">Semua</button>
             <button onclick="filterPembahasan('BENAR')" id="filterBenar" class="px-3 py-1.5 rounded-xl text-slate-600 dark:text-slate-300 hover:text-emerald-600">Benar</button>
@@ -684,7 +931,6 @@
           </div>
         </div>
 
-        <!-- Question Discussion List -->
         <div id="pembahasanListContainer" class="space-y-4">
           <!-- Injected via JS -->
         </div>
@@ -693,8 +939,10 @@
 
     </main>
 
-    <!-- TAB CONTAINER 4: MENU NILAI & PIAGAM -->
-    <main id="tabNilai" class="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 space-y-5 hidden">
+    <!-- ======================================================================= -->
+    <!-- TAB 4: MENU NILAI & PIAGAM RESMI -->
+    <!-- ======================================================================= -->
+    <main id="tabNilai" class="flex-1 max-w-md sm:max-w-2xl w-full mx-auto p-4 sm:p-6 space-y-5 hidden">
       
       <!-- Locked State Notice -->
       <div id="nilaiLockedState" class="bg-white dark:bg-slate-900 rounded-3xl p-8 sm:p-12 text-center border border-purple-100 dark:border-slate-800 shadow-sm">
@@ -726,7 +974,7 @@
           </div>
         </div>
 
-        <!-- Metric Breakdown Grid (3 Grid) -->
+        <!-- Metric Breakdown Grid -->
         <div class="grid grid-cols-3 gap-3 text-center">
           <div class="bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800/60 rounded-3xl p-4 shadow-sm">
             <div class="text-[10px] text-emerald-600 font-extrabold uppercase">Jawaban Benar</div>
@@ -757,7 +1005,6 @@
         <!-- FORMAL PRINTABLE CERTIFICATE AREA (Kop Dinas Ambulu) -->
         <div id="printArea" class="bg-white rounded-3xl p-8 border-2 border-slate-300 text-slate-900 hidden sm:block">
           
-          <!-- Kop Surat Resmi -->
           <div class="text-center border-b-4 border-double border-slate-800 pb-4 mb-6">
             <h4 class="text-xs font-bold tracking-wider uppercase text-slate-600">PEMERINTAH KABUPATEN JEMBER • DINAS PENDIDIKAN</h4>
             <h3 class="text-sm font-extrabold uppercase tracking-wide">KOORDINATOR WILAYAH BIDANG PENDIDIKAN KECAMATAN AMBULU</h3>
@@ -765,7 +1012,6 @@
             <p class="text-[10px] text-slate-500 mt-1">Kecamatan Ambulu, Kabupaten Jember, Jawa Timur • Kode Pos 68172</p>
           </div>
 
-          <!-- Judul Piagam -->
           <div class="text-center mb-6">
             <div class="inline-block px-4 py-1 bg-purple-100 text-purple-900 rounded-full text-xs font-extrabold uppercase tracking-widest mb-1.5">
               SURAT KETERANGAN HASIL ASESMEN
@@ -774,7 +1020,6 @@
             <p class="text-xs text-slate-600">Tahun Ajaran 2025/2026</p>
           </div>
 
-          <!-- Data Siswa -->
           <div class="max-w-md mx-auto text-xs space-y-2 mb-6">
             <div class="flex"><span class="w-36 text-slate-500">Nama Peserta</span><span class="font-bold">: <span id="printNama">-</span></span></div>
             <div class="flex"><span class="w-36 text-slate-500">NISN / NIS</span><span class="font-mono font-bold">: <span id="printNisn">-</span> / <span id="printNis">-</span></span></div>
@@ -783,7 +1028,6 @@
             <div class="flex"><span class="w-36 text-slate-500">Mata Asesmen</span><span class="font-bold">: Literasi & Numerasi SD</span></div>
           </div>
 
-          <!-- Tabel Nilai -->
           <div class="max-w-md mx-auto mb-8 border border-slate-300 rounded-2xl overflow-hidden">
             <table class="w-full text-xs text-center">
               <thead class="bg-slate-100 border-b border-slate-300 font-bold">
@@ -805,7 +1049,6 @@
             </table>
           </div>
 
-          <!-- Tanda Tangan & Cap -->
           <div class="flex justify-between items-end text-xs pt-4 max-w-lg mx-auto">
             <div class="text-center">
               <p class="text-slate-500">Mengetahui,</p>
@@ -831,32 +1074,28 @@
     </main>
 
     <!-- ========================================================================= -->
-    <!-- FLOATING BOTTOM NAVIGATION DOCK (4 MENU SISWA) -->
+    <!-- FLOATING BOTTOM NAVIGATION DOCK (PERSIS DOCK HITAM DI REFERENSI) -->
     <!-- ========================================================================= -->
-    <nav class="fixed bottom-3 left-1/2 -translate-x-1/2 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-purple-200/80 dark:border-slate-800 rounded-full px-3 py-2 shadow-2xl shadow-purple-500/20 flex items-center gap-1 sm:gap-2">
+    <nav class="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-[#18181B] border border-slate-700/60 rounded-full px-4 py-2.5 shadow-2xl flex items-center gap-2 sm:gap-4">
       
-      <!-- Tab 1: Dashboard -->
-      <button onclick="openTab('dashboard')" id="dockBtnDashboard" class="nav-dock-item active flex items-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-full text-xs font-bold transition">
-        <i class="fa-solid fa-house"></i>
-        <span>Beranda</span>
+      <!-- Dock 1: Beranda -->
+      <button onclick="openTab('dashboard')" id="dockBtnDashboard" class="dock-btn active flex items-center justify-center w-11 h-11 rounded-full text-slate-400 hover:text-white transition">
+        <i class="fa-solid fa-house text-base"></i>
       </button>
 
-      <!-- Tab 2: Menu Ujian -->
-      <button onclick="openTab('ujian')" id="dockBtnUjian" class="nav-dock-item text-slate-600 dark:text-slate-300 hover:text-brand-600 flex items-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-full text-xs font-bold transition">
-        <i class="fa-solid fa-pen-nib"></i>
-        <span>Ujian</span>
+      <!-- Dock 2: Ujian -->
+      <button onclick="openTab('ujian')" id="dockBtnUjian" class="dock-btn flex items-center justify-center w-11 h-11 rounded-full text-slate-400 hover:text-white transition">
+        <i class="fa-solid fa-pen-nib text-base"></i>
       </button>
 
-      <!-- Tab 3: Menu Pembahasan -->
-      <button onclick="openTab('pembahasan')" id="dockBtnPembahasan" class="nav-dock-item text-slate-600 dark:text-slate-300 hover:text-brand-600 flex items-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-full text-xs font-bold transition">
-        <i class="fa-solid fa-book-open"></i>
-        <span>Pembahasan</span>
+      <!-- Dock 3: Pembahasan -->
+      <button onclick="openTab('pembahasan')" id="dockBtnPembahasan" class="dock-btn flex items-center justify-center w-11 h-11 rounded-full text-slate-400 hover:text-white transition">
+        <i class="fa-solid fa-book-open text-base"></i>
       </button>
 
-      <!-- Tab 4: Menu Nilai -->
-      <button onclick="openTab('nilai')" id="dockBtnNilai" class="nav-dock-item text-slate-600 dark:text-slate-300 hover:text-brand-600 flex items-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-full text-xs font-bold transition">
-        <i class="fa-solid fa-award"></i>
-        <span>Nilai</span>
+      <!-- Dock 4: Nilai -->
+      <button onclick="openTab('nilai')" id="dockBtnNilai" class="dock-btn flex items-center justify-center w-11 h-11 rounded-full text-slate-400 hover:text-white transition">
+        <i class="fa-solid fa-award text-base"></i>
       </button>
 
     </nav>
@@ -895,6 +1134,10 @@
       currentTab: 'dashboard',
       sekolah: null,
       siswa: null,
+      packages: [],
+      selectedPackage: null,
+      isExamLocked: false,
+      isCbtActive: false,
       soalList: [],
       currentIndex: 0,
       jawaban: {}, // { idSoal: 'A' }
@@ -910,6 +1153,39 @@
     };
 
     /**
+     * DEFAULT PAKET UJIAN JIKA OFFLINE
+     */
+    const DEFAULT_PACKAGES = [
+      {
+        idPaket: "LIT",
+        namaPaket: "Paket 1: Literasi Membaca",
+        mapel: "Literasi Membaca",
+        jumlahSoal: 20,
+        durasiMenit: 45,
+        isLocked: false,
+        keterangan: "Bahasa Indonesia & Pemahaman Wacana"
+      },
+      {
+        idPaket: "NUM",
+        namaPaket: "Paket 2: Numerasi Berhitung",
+        mapel: "Numerasi Berhitung",
+        jumlahSoal: 20,
+        durasiMenit: 45,
+        isLocked: false,
+        keterangan: "Matematika & Logika Berhitung"
+      },
+      {
+        idPaket: "GABUNGAN",
+        namaPaket: "Paket 3: Try Out Lengkap TKA SD",
+        mapel: "Literasi & Numerasi",
+        jumlahSoal: 40,
+        durasiMenit: 60,
+        isLocked: false,
+        keterangan: "Simulasi Gabungan Literasi + Numerasi"
+      }
+    ];
+
+    /**
      * DUMMY SAMPLE SOAL JIKA OFFLINE / STANDALONE
      */
     const DUMMY_SOAL = [
@@ -917,7 +1193,7 @@
         nomor: 1,
         idSoal: "SOAL-001",
         mapel: "Literasi Membaca",
-        pertanyaan: "Bacalah teks berikut dengan saksama:<br>'Sungai Bedadung mengalir membelah Kabupaten Jember. Airnya yang melimpah menjadi sumber utama irigasi ribuan hektar sawah petani di wilayah Ambulu dan sekitarnya.'<br><br>Gagasan pokok dari kutipan teks di atas adalah...",
+        pertanyaan: "Bacalah kutipan wacana berikut dengan saksama:<br>'Sungai Bedadung mengalir membelah Kabupaten Jember. Airnya yang melimpah menjadi sumber utama irigasi ribuan hektar sawah petani di wilayah Ambulu dan sekitarnya.'<br><br>Gagasan pokok dari kutipan teks di atas adalah...",
         gambarUrl: "",
         opsiA: "Bencana banjir tahunan di sepanjang Sungai Bedadung",
         opsiB: "Manfaat air Sungai Bedadung bagi pengairan sawah di Jember",
@@ -954,7 +1230,6 @@
       }
     ];
 
-    // Inisialisasi saat halaman selesai dimuat
     document.addEventListener('DOMContentLoaded', () => {
       initAppConfig();
       renderModalSekolahList();
@@ -963,9 +1238,6 @@
       checkExistingSession();
     });
 
-    /**
-     * Konfigurasi API Endpoint
-     */
     async function initAppConfig() {
       const activeUrl = typeof getGasUrl === 'function' ? getGasUrl() : (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.gasUrl : '');
       if (activeUrl && activeUrl !== "TEMPEL_URL_GOOGLE_APPS_SCRIPT_DI_SINI") {
@@ -978,14 +1250,9 @@
           const config = await res.json();
           if (config.apiEndpoint) CBT_STATE.apiEndpoint = config.apiEndpoint;
         }
-      } catch (e) {
-        console.log("Menggunakan API default: " + CBT_STATE.apiEndpoint);
-      }
+      } catch (e) {}
     }
 
-    /**
-     * Render Daftar Sekolah di Modal Bantuan Siswa
-     */
     function renderModalSekolahList() {
       const container = document.getElementById('schoolListGrid');
       if (!container) return;
@@ -1025,9 +1292,6 @@
       closeDaftarSekolahModal();
     }
 
-    /**
-     * Deteksi Otomatis Token Lembaga saat Diketik
-     */
     function handleKodeUnikChange(val) {
       const clean = val.trim().toUpperCase();
       const match = MASTER_SEKOLAH_LIST.find(s => s.kodeUnik.toUpperCase() === clean || s.npsn === clean);
@@ -1042,9 +1306,6 @@
       }
     }
 
-    /**
-     * Memeriksa sesi tersimpan di LocalStorage
-     */
     function checkExistingSession() {
       const saved = localStorage.getItem('sis_active_session');
       if (saved) {
@@ -1054,7 +1315,6 @@
             Object.assign(CBT_STATE, parsed);
             showAppShell();
 
-            // Jika siswa belum melengkapi identitas, buka pop-up
             if (!CBT_STATE.siswa || !CBT_STATE.siswa.nisn || !CBT_STATE.siswa.nama) {
               openIdentitasModal();
             } else if (CBT_STATE.isSubmitted) {
@@ -1062,7 +1322,7 @@
               renderNilaiTab();
             } else {
               openTab('dashboard');
-              startCountdownTimer();
+              refreshExamPackages();
             }
           }
         } catch (e) {
@@ -1072,7 +1332,7 @@
     }
 
     /**
-     * STEP 1: HANDLER LOGIN DENGAN TOKEN LEMBAGA
+     * STEP 1: LOGIN HANYA MENGGUNAKAN TOKEN LEMBAGA
      */
     async function handleTokenLoginSubmit(event) {
       event.preventDefault();
@@ -1107,15 +1367,12 @@
           CBT_STATE.sekolah = data.sekolah;
           saveSessionToLocal();
           showAppShell();
-
-          // Munculkan Pop-up Pengisian Identitas Siswa
           openIdentitasModal();
           showToast(`Berhasil masuk ke ${data.sekolah.namaSekolah}! Silakan lengkapi identitasmu.`, "info");
         } else {
           showToast(data.message || "Token Lembaga tidak valid. Periksa kembali.", "error");
         }
       } catch (err) {
-        console.warn("Backend belum merespons. Menggunakan simulasi lokal.");
         const match = MASTER_SEKOLAH_LIST.find(s => s.kodeUnik.toUpperCase() === kodeUnik.toUpperCase()) || {
           npsn: "20524058",
           namaSekolah: "SDN Sumberejo 04",
@@ -1133,9 +1390,6 @@
       }
     }
 
-    /**
-     * Tampilkan Shell Aplikasi & Sembunyikan Login
-     */
     function showAppShell() {
       document.getElementById('viewLogin').classList.add('hidden');
       document.getElementById('viewAppShell').classList.remove('hidden');
@@ -1149,13 +1403,8 @@
         document.getElementById('shellStudentName').innerText = CBT_STATE.siswa.nama || 'Siswa';
         document.getElementById('shellSchoolInfo').innerText = `${CBT_STATE.sekolah.namaSekolah} • ${CBT_STATE.siswa.kelas || 'VI'} • NIS: ${CBT_STATE.siswa.nis || '-'}`;
       }
-
-      document.getElementById('dashTotalSoal').innerText = CBT_STATE.soalList.length || 40;
     }
 
-    /**
-     * BUKA POP-UP IDENTITAS SISWA (NAMA, NISN, NIS)
-     */
     function openIdentitasModal() {
       if (CBT_STATE.siswa) {
         document.getElementById('popNama').value = CBT_STATE.siswa.nama || '';
@@ -1171,7 +1420,7 @@
     }
 
     /**
-     * STEP 2: HANDLER SIMPAN IDENTITAS SISWA (DI DALAM APLIKASI)
+     * STEP 2: SIMPAN IDENTITAS SISWA (NAMA, NISN, NIS)
      */
     async function handleIdentitasSubmit(event) {
       event.preventDefault();
@@ -1215,7 +1464,6 @@
         if (data.success) {
           CBT_STATE.siswa = data.siswa;
           CBT_STATE.soalList = (data.soalList && data.soalList.length > 0) ? data.soalList : DUMMY_SOAL;
-          CBT_STATE.secondsRemaining = (data.siswa.durasiMenit || 60) * 60;
           CBT_STATE.isSubmitted = !!data.isFinished;
 
           if (data.hasilNilai) CBT_STATE.hasilNilai = data.hasilNilai;
@@ -1224,18 +1472,17 @@
           document.getElementById('modalIdentitasSiswa').classList.add('hidden');
           showAppShell();
           showToast(`Identitas ${nama} berhasil dicatat di database!`, "info");
+          refreshExamPackages();
 
           if (CBT_STATE.isSubmitted) {
             openTab('nilai');
           } else {
             openTab('dashboard');
-            startCountdownTimer();
           }
         } else {
           showToast(data.message || "Gagal mencatat identitas.", "error");
         }
       } catch (err) {
-        console.warn("Backend offline. Menyimpan identitas dalam mode simulasi.");
         CBT_STATE.siswa = {
           nisn: nisn,
           nis: nis,
@@ -1245,15 +1492,14 @@
           durasiMenit: 60
         };
         CBT_STATE.soalList = DUMMY_SOAL;
-        CBT_STATE.secondsRemaining = 3600;
         CBT_STATE.isSubmitted = false;
 
         saveSessionToLocal();
         document.getElementById('modalIdentitasSiswa').classList.add('hidden');
         showAppShell();
         showToast(`Identitas ${nama} berhasil disimpan (Mode Simulasi)!`, "info");
+        refreshExamPackages();
         openTab('dashboard');
-        startCountdownTimer();
       } finally {
         btn.disabled = false;
         btn.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> <span>Simpan & Masuk ke Dashboard</span>`;
@@ -1261,48 +1507,224 @@
     }
 
     /**
-     * NAVIGASI 4 TAB UTAMA (FLOATING DOCK)
+     * AMBIL DAFTAR PAKET UJIAN & STATUS KUNCI DARI ADMIN/PROKTOR
      */
-    function openTab(tabName) {
-      ['dashboard', 'ujian', 'pembahasan', 'nilai'].forEach(t => {
-        const cap = t.charAt(0).toUpperCase() + t.slice(1);
-        const el = document.getElementById('tab' + cap);
-        const btn = document.getElementById('dockBtn' + cap);
-        if (el) el.classList.add('hidden');
-        if (btn) btn.classList.remove('active', 'bg-brand-600', 'text-white');
-      });
+    async function refreshExamPackages() {
+      if (!CBT_STATE.sekolah) return;
 
-      const activeCap = tabName.charAt(0).toUpperCase() + tabName.slice(1);
-      const activeEl = document.getElementById('tab' + activeCap);
-      const activeBtn = document.getElementById('dockBtn' + activeCap);
-
-      if (activeEl) activeEl.classList.remove('hidden');
-      if (activeBtn) activeBtn.classList.add('active');
-
-      CBT_STATE.currentTab = tabName;
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-
-      if (tabName === 'ujian') {
-        if (CBT_STATE.soalList && CBT_STATE.soalList.length > 0) {
-          renderQuestion(CBT_STATE.currentIndex);
+      const activeGasUrl = typeof getGasUrl === 'function' ? getGasUrl() : (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.gasUrl : '');
+      try {
+        const res = await fetch(CBT_STATE.apiEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'siswaGetExamPackages',
+            gasUrl: activeGasUrl,
+            payload: { npsn: CBT_STATE.sekolah.npsn }
+          })
+        });
+        const data = await res.json();
+        if (data.success && data.packages) {
+          CBT_STATE.packages = data.packages;
+          CBT_STATE.isExamLocked = !!data.isExamLocked;
+        } else {
+          CBT_STATE.packages = DEFAULT_PACKAGES;
+          CBT_STATE.isExamLocked = false;
         }
-      } else if (tabName === 'pembahasan') {
-        renderPembahasanTab();
-      } else if (tabName === 'nilai') {
-        renderNilaiTab();
+      } catch (e) {
+        CBT_STATE.packages = DEFAULT_PACKAGES;
+        CBT_STATE.isExamLocked = false;
       }
+
+      renderExamPackagesList();
+      updateDashboardBadges();
     }
 
-    function switchToExamTab() {
-      if (CBT_STATE.isSubmitted) {
-        openTab('nilai');
+    function updateDashboardBadges() {
+      CBT_STATE.packages.forEach(p => {
+        const b = document.getElementById('badgeStatus_' + p.idPaket);
+        if (!b) return;
+        if (p.isLocked || CBT_STATE.isExamLocked) {
+          b.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800";
+          b.innerHTML = "🔒 Terkunci (Belum Waktunya)";
+        } else {
+          b.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800";
+          b.innerHTML = "🟢 Ujian Dibuka";
+        }
+      });
+    }
+
+    function renderExamPackagesList() {
+      const container = document.getElementById('examPackagesListContainer');
+      const globalAlert = document.getElementById('alertExamGlobalLocked');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (CBT_STATE.isExamLocked) {
+        if (globalAlert) globalAlert.classList.remove('hidden');
       } else {
-        openTab('ujian');
+        if (globalAlert) globalAlert.classList.add('hidden');
+      }
+
+      CBT_STATE.packages.forEach(p => {
+        const isLocked = CBT_STATE.isExamLocked || p.isLocked;
+        const card = document.createElement('div');
+
+        let bgClass = "bg-white dark:bg-slate-900 border-purple-100 dark:border-slate-800";
+        let icon = "📚";
+        if (p.idPaket === "NUM") icon = "⏰";
+        if (p.idPaket === "GABUNGAN") icon = "🎯";
+
+        card.className = `${bgClass} rounded-3xl p-5 border shadow-sm flex items-center justify-between gap-4 transition ${isLocked ? 'opacity-80' : 'hover:shadow-md'}`;
+
+        card.innerHTML = `
+          <div class="flex items-center gap-3.5">
+            <div class="w-14 h-14 rounded-2xl ${isLocked ? 'bg-slate-100 text-slate-400' : 'bg-purple-50 text-brand-600'} flex items-center justify-center text-2xl shadow-inner shrink-0">
+              ${isLocked ? '🔒' : icon}
+            </div>
+            <div>
+              <h4 class="text-sm font-extrabold text-slate-900 dark:text-white">${p.namaPaket}</h4>
+              <p class="text-[11px] text-slate-500">${p.keterangan || p.mapel}</p>
+              <div class="flex items-center gap-2 mt-1.5">
+                <span class="text-[10px] font-bold text-slate-600 dark:text-slate-400">${p.jumlahSoal} Soal • ${p.durasiMenit} Menit</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${isLocked ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}">
+                  ${isLocked ? '🔒 Terkunci' : '🟢 Siap Dikerjakan'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            ${isLocked 
+              ? `<button onclick="alertLockedPackage()" class="px-4 py-2.5 bg-slate-200 dark:bg-slate-800 text-slate-500 font-extrabold rounded-2xl text-xs flex items-center gap-1.5 cursor-not-allowed">
+                  <i class="fa-solid fa-lock"></i>
+                  <span>Terkunci</span>
+                 </button>`
+              : `<button onclick="selectPackageForExam('${p.idPaket}')" class="px-4 py-2.5 bg-black hover:bg-slate-900 text-white font-extrabold rounded-2xl text-xs flex items-center gap-1.5 shadow transition active:scale-95">
+                  <span>Mulai</span>
+                  <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                 </button>`
+            }
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    function alertLockedPackage() {
+      showToast("Ujian ini masih DIKUNCI oleh Bapak/Ibu Guru pengawas. Harap tunggu aba-aba resmi!", "error");
+    }
+
+    /**
+     * SISWA MEMILIH PAKET UJIAN -> MUNCUL MODAL TOKEN DARI GURU
+     */
+    function selectPackageForExam(idPaket) {
+      if (!CBT_STATE.packages || CBT_STATE.packages.length === 0) {
+        CBT_STATE.packages = DEFAULT_PACKAGES;
+      }
+      const pkg = CBT_STATE.packages.find(p => p.idPaket === idPaket) || CBT_STATE.packages[0];
+
+      if (CBT_STATE.isExamLocked || pkg.isLocked) {
+        alertLockedPackage();
+        return;
+      }
+
+      CBT_STATE.selectedPackage = pkg;
+      document.getElementById('tokenModalPaketName').innerText = pkg.namaPaket;
+      document.getElementById('inputTokenUjianGuru').value = '';
+      document.getElementById('modalTokenUjianGuru').classList.remove('hidden');
+    }
+
+    function closeModalTokenUjian(e) {
+      if (!e || e.target.id === 'modalTokenUjianGuru' || e.target.type === 'button') {
+        document.getElementById('modalTokenUjianGuru').classList.add('hidden');
       }
     }
 
     /**
-     * RENDER SOAL PADA MENU UJIAN
+     * VERIFIKASI TOKEN UJIAN DARI GURU
+     */
+    async function handleVerifyTokenGuru(event) {
+      event.preventDefault();
+      const tokenInput = document.getElementById('inputTokenUjianGuru').value.trim().toUpperCase();
+
+      if (!tokenInput) {
+        showToast("Masukkan Token Ujian dari guru terlebih dahulu.", "error");
+        return;
+      }
+
+      const btn = document.getElementById('btnVerifyTokenGuru');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Memverifikasi...`;
+
+      try {
+        const activeGasUrl = typeof getGasUrl === 'function' ? getGasUrl() : (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.gasUrl : '');
+        const payload = {
+          action: 'siswaVerifyExamToken',
+          gasUrl: activeGasUrl,
+          payload: {
+            npsn: CBT_STATE.sekolah.npsn,
+            nisn: CBT_STATE.siswa.nisn,
+            idPaket: CBT_STATE.selectedPackage.idPaket,
+            tokenInput: tokenInput
+          }
+        };
+
+        const res = await fetch(CBT_STATE.apiEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          closeModalTokenUjian();
+          showToast("Token Ujian Valid! Selamat mengerjakan.", "info");
+
+          CBT_STATE.soalList = (data.soalList && data.soalList.length > 0) ? data.soalList : DUMMY_SOAL;
+          CBT_STATE.secondsRemaining = (data.paketInfo.durasiMenit || 60) * 60;
+          startCbtExamSession();
+        } else {
+          showToast(data.message || "Token Ujian salah!", "error");
+        }
+      } catch (err) {
+        // Fallback Simulasi
+        if (tokenInput === "TKA26" || tokenInput.length >= 4) {
+          closeModalTokenUjian();
+          showToast("Token Ujian Terverifikasi (Mode Simulasi)!", "info");
+          CBT_STATE.soalList = DUMMY_SOAL;
+          CBT_STATE.secondsRemaining = (CBT_STATE.selectedPackage.durasiMenit || 60) * 60;
+          startCbtExamSession();
+        } else {
+          showToast("Token Ujian salah! Tanyakan pada Bapak/Ibu Guru.", "error");
+        }
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span>Mulai Ujian</span> <i class="fa-solid fa-arrow-right"></i>`;
+      }
+    }
+
+    /**
+     * MULAI SESI PENGERJAAN CBT
+     */
+    function startCbtExamSession() {
+      CBT_STATE.isCbtActive = true;
+      CBT_STATE.currentIndex = 0;
+      saveSessionToLocal();
+
+      // Buka SubView CBT Room dan sembunyikan katalog paket
+      document.getElementById('subViewPaketUjian').classList.add('hidden');
+      document.getElementById('subViewCbtRoom').classList.remove('hidden');
+
+      openTab('ujian');
+      renderQuestion(0);
+      startCountdownTimer();
+    }
+
+    /**
+     * RENDER SOAL PADA RUANG CBT
      */
     function renderQuestion(index) {
       if (!CBT_STATE.soalList || CBT_STATE.soalList.length === 0) return;
@@ -1315,7 +1737,7 @@
       document.getElementById('currentQNumber').innerText = qNum;
       document.getElementById('navCurrentNum').innerText = qNum;
       document.getElementById('navTotalNum').innerText = CBT_STATE.soalList.length;
-      document.getElementById('questionTopic').innerText = q.mapel || 'Literasi & Numerasi';
+      document.getElementById('questionTopic').innerText = q.mapel || (CBT_STATE.selectedPackage ? CBT_STATE.selectedPackage.namaPaket : 'Literasi & Numerasi');
       document.getElementById('paletteBadge').innerText = `${qNum}/${CBT_STATE.soalList.length}`;
 
       document.getElementById('questionTextContainer').innerHTML = q.pertanyaan;
@@ -1421,9 +1843,6 @@
       if (CBT_STATE.currentIndex < CBT_STATE.soalList.length - 1) renderQuestion(CBT_STATE.currentIndex + 1);
     }
 
-    /**
-     * PALET NOMOR SOAL
-     */
     function openPaletteModal() {
       const grid = document.getElementById('paletteGrid');
       grid.innerHTML = '';
@@ -1470,12 +1889,9 @@
       document.getElementById('modalPalette').classList.add('hidden');
     }
 
-    /**
-     * TIMER COUNTDOWN
-     */
     function startCountdownTimer() {
       if (CBT_STATE.timerInterval) clearInterval(CBT_STATE.timerInterval);
-      if (CBT_STATE.isSubmitted) return;
+      if (CBT_STATE.isSubmitted || !CBT_STATE.isCbtActive) return;
 
       updateTimerDisplay();
 
@@ -1509,9 +1925,6 @@
       }
     }
 
-    /**
-     * FONT RESIZER
-     */
     function toggleFontSize() {
       const levels = ['font-size-sm', 'font-size-md', 'font-size-lg'];
       const labels = ['A-', 'A', 'A+'];
@@ -1523,12 +1936,9 @@
       document.getElementById('fontLabel').innerText = labels[CBT_STATE.fontSizeLevel];
     }
 
-    /**
-     * ANTI-CHEAT LISTENER
-     */
     function setupAntiCheatListener() {
       document.addEventListener('visibilitychange', () => {
-        if (!CBT_STATE.isSubmitted && CBT_STATE.currentTab === 'ujian' && document.hidden) {
+        if (!CBT_STATE.isSubmitted && CBT_STATE.isCbtActive && document.hidden) {
           CBT_STATE.violationCount++;
           document.getElementById('violationCount').innerText = CBT_STATE.violationCount;
           document.getElementById('modalAntiCheat').classList.remove('hidden');
@@ -1546,9 +1956,6 @@
       document.getElementById('modalAntiCheat').classList.add('hidden');
     }
 
-    /**
-     * MODAL KONFIRMASI SUBMIT
-     */
     function openConfirmModal() {
       const total = CBT_STATE.soalList.length;
       const answered = Object.keys(CBT_STATE.jawaban).length;
@@ -1574,9 +1981,6 @@
       document.getElementById('modalConfirmSubmit').classList.add('hidden');
     }
 
-    /**
-     * SUBMIT UJIAN KE SERVER
-     */
     async function executeFinalSubmit(isForce = false) {
       closeConfirmModal();
       clearInterval(CBT_STATE.timerInterval);
@@ -1600,7 +2004,7 @@
           npsn: CBT_STATE.sekolah.npsn,
           nisn: CBT_STATE.siswa.nisn,
           nis: CBT_STATE.siswa.nis || '-',
-          paket: CBT_STATE.siswa.paket || 'PAKET-A',
+          paket: (CBT_STATE.selectedPackage ? CBT_STATE.selectedPackage.idPaket : 'PAKET-A'),
           jawaban: jawabanArray
         }
       };
@@ -1619,10 +2023,10 @@
           calculateLocalResult(jawabanArray);
         }
       } catch (err) {
-        console.warn("Gagal terhubung ke backend saat submit. Menggunakan kalkulasi lokal.");
         calculateLocalResult(jawabanArray);
       } finally {
         CBT_STATE.isSubmitted = true;
+        CBT_STATE.isCbtActive = false;
         saveSessionToLocal();
         showToast("Ujian berhasil dikumpulkan! Nilaimu sudah siap.", "info");
         openTab('nilai');
@@ -1650,7 +2054,7 @@
         nama: CBT_STATE.siswa.nama,
         nisn: CBT_STATE.siswa.nisn,
         nis: CBT_STATE.siswa.nis || '-',
-        paket: CBT_STATE.siswa.paket || 'PAKET-A',
+        paket: (CBT_STATE.selectedPackage ? CBT_STATE.selectedPackage.namaPaket : 'TKA SD'),
         nilaiAkhir: nilaiAkhir,
         jumlahSoal: totalSoal,
         jumlahBenar: benar,
@@ -1659,9 +2063,6 @@
       };
     }
 
-    /**
-     * RENDER TAB NILAI & PIAGAM
-     */
     function renderNilaiTab() {
       const lockedEl = document.getElementById('nilaiLockedState');
       const unlockedEl = document.getElementById('nilaiUnlockedState');
@@ -1687,7 +2088,6 @@
       else if (h.nilaiAkhir >= 60) predikat = "Cukup (C)";
       document.getElementById('resultPredicate').innerText = predikat;
 
-      // Print Certificate Area
       document.getElementById('printSekolahTitle').innerText = (CBT_STATE.sekolah.namaSekolah + " AMBULU").toUpperCase();
       document.getElementById('printNama').innerText = CBT_STATE.siswa.nama;
       document.getElementById('printNisn').innerText = CBT_STATE.siswa.nisn;
@@ -1706,9 +2106,6 @@
       window.print();
     }
 
-    /**
-     * RENDER TAB PEMBAHASAN
-     */
     async function renderPembahasanTab() {
       const lockedEl = document.getElementById('pembahasanLockedState');
       const unlockedEl = document.getElementById('pembahasanUnlockedState');
@@ -1741,7 +2138,7 @@
             payload: {
               npsn: CBT_STATE.sekolah.npsn,
               nisn: CBT_STATE.siswa.nisn,
-              paket: CBT_STATE.siswa.paket || 'PAKET-A'
+              paket: (CBT_STATE.selectedPackage ? CBT_STATE.selectedPackage.idPaket : 'PAKET-A')
             }
           })
         });
@@ -1814,7 +2211,6 @@
       list.forEach(p => {
         const isBenar = p.status === 'BENAR';
         const isSalah = p.status === 'SALAH';
-        const isKosong = p.status === 'KOSONG';
 
         const badgeClass = isBenar ? 'bg-emerald-100 text-emerald-700' : (isSalah ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600');
         const badgeLabel = isBenar ? '✓ Jawabanmu Benar' : (isSalah ? '✗ Jawabanmu Salah' : '○ Tidak Dijawab');
@@ -1838,7 +2234,6 @@
 
           ${p.gambarUrl ? `<div class="text-center my-3"><img src="${p.gambarUrl}" class="max-h-56 rounded-2xl mx-auto border object-contain"></div>` : ''}
 
-          <!-- Grid Pilihan Jawaban -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
             ${['A', 'B', 'C', 'D'].map(k => {
               const optText = p['opsi' + k];
@@ -1861,7 +2256,6 @@
             }).join('')}
           </div>
 
-          <!-- Box Pembahasan Langkah demi Langkah -->
           <div class="bg-purple-50 dark:bg-purple-950/40 rounded-2xl p-4 border border-purple-200 dark:border-purple-800 text-xs text-purple-950 dark:text-purple-200">
             <div class="font-extrabold text-brand-700 dark:text-brand-300 mb-1 flex items-center gap-1.5">
               <i class="fa-solid fa-lightbulb"></i> Pembahasan & Kunci Jawaban:
@@ -1871,6 +2265,45 @@
         `;
         container.appendChild(card);
       });
+    }
+
+    /**
+     * NAVIGASI 4 TAB UTAMA (FLOATING DOCK)
+     */
+    function openTab(tabName) {
+      ['dashboard', 'ujian', 'pembahasan', 'nilai'].forEach(t => {
+        const cap = t.charAt(0).toUpperCase() + t.slice(1);
+        const el = document.getElementById('tab' + cap);
+        const btn = document.getElementById('dockBtn' + cap);
+        if (el) el.classList.add('hidden');
+        if (btn) btn.classList.remove('active');
+      });
+
+      const activeCap = tabName.charAt(0).toUpperCase() + tabName.slice(1);
+      const activeEl = document.getElementById('tab' + activeCap);
+      const activeBtn = document.getElementById('dockBtn' + activeCap);
+
+      if (activeEl) activeEl.classList.remove('hidden');
+      if (activeBtn) activeBtn.classList.add('active');
+
+      CBT_STATE.currentTab = tabName;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      if (tabName === 'ujian') {
+        if (CBT_STATE.isCbtActive && CBT_STATE.soalList && CBT_STATE.soalList.length > 0) {
+          document.getElementById('subViewPaketUjian').classList.add('hidden');
+          document.getElementById('subViewCbtRoom').classList.remove('hidden');
+          renderQuestion(CBT_STATE.currentIndex);
+        } else {
+          document.getElementById('subViewPaketUjian').classList.remove('hidden');
+          document.getElementById('subViewCbtRoom').classList.add('hidden');
+          refreshExamPackages();
+        }
+      } else if (tabName === 'pembahasan') {
+        renderPembahasanTab();
+      } else if (tabName === 'nilai') {
+        renderNilaiTab();
+      }
     }
 
     /**
@@ -1960,13 +2393,12 @@
       if (ctx) ctx.strokeStyle = color;
     }
 
-    /**
-     * PERSISTENSI KE LOCALSTORAGE
-     */
     function saveSessionToLocal() {
       const dataToSave = {
         sekolah: CBT_STATE.sekolah,
         siswa: CBT_STATE.siswa,
+        selectedPackage: CBT_STATE.selectedPackage,
+        isCbtActive: CBT_STATE.isCbtActive,
         soalList: CBT_STATE.soalList,
         currentIndex: CBT_STATE.currentIndex,
         jawaban: CBT_STATE.jawaban,
@@ -1986,9 +2418,6 @@
       }
     }
 
-    /**
-     * TOAST NOTIFIKASI
-     */
     function showToast(message, type = 'info') {
       const container = document.getElementById('toastContainer');
       const toast = document.createElement('div');
