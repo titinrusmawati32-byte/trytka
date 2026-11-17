@@ -443,7 +443,7 @@
             <!-- Preview Image Display -->
             <div id="stagingImgPreviewContainer" class="hidden pt-2 text-center">
               <div class="relative inline-block max-w-full">
-                <img id="stagingImgPreview" src="" alt="Gambar Soal" class="max-h-56 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm object-contain bg-white dark:bg-slate-900 mx-auto">
+                <img id="stagingImgPreview" src="" alt="Gambar Soal" class="max-h-80 sm:max-h-[460px] w-auto max-w-full rounded-2xl border-2 border-brand-200 dark:border-slate-700 shadow-md object-contain bg-white dark:bg-slate-900 mx-auto">
               </div>
             </div>
           </div>
@@ -1982,7 +1982,7 @@
       showToast("Butir soal berhasil dihapus.", "info");
     }
 
-    // KOMPRESI GAMBAR OTOMATIS (MAX 30KB BASE64) AGAR PASTI MUAT & TIDAK RUSAK DI GOOGLE SPREADSHEET
+    // OPTIMASI GAMBAR RESOLUSI TINGGI (HD - TAJAM & JELAS UNTUK DOKUMEN/BACAAN SOAL)
     function compressAndSetImage(fileOrBlob) {
       if (!fileOrBlob) return;
       const reader = new FileReader();
@@ -1990,7 +1990,8 @@
         const rawDataUrl = evt.target.result;
         const img = new Image();
         img.onload = function() {
-          let maxDim = 600;
+          // Tetap pertahankan resolusi tinggi (hingga 1200px) agar teks bacaan / dokumen tetap tajam dan jelas dibaca
+          let maxDim = 1200;
           let w = img.width;
           let h = img.height;
           if (w > maxDim || h > maxDim) {
@@ -2004,33 +2005,21 @@
           }
 
           const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
           const ctx = canvas.getContext('2d');
-          let quality = 0.72;
-          let compressedDataUrl = '';
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
 
-          // Loop jaminan ukuran: data URL tidak boleh melebihi 32.000 karakter agar tidak melebihi batas sel Google Sheets (50.000)
-          for (let attempt = 0; attempt < 6; attempt++) {
-            canvas.width = w;
-            canvas.height = h;
-            ctx.fillStyle = '#FFFFFF';
-            ctx.fillRect(0, 0, w, h);
-            ctx.drawImage(img, 0, 0, w, h);
-
-            compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-            if (compressedDataUrl.length <= 32000) {
-              break;
-            }
-            quality = Math.max(0.3, quality - 0.15);
-            w = Math.round(w * 0.8);
-            h = Math.round(h * 0.8);
-          }
-
+          // Kualitas tinggi 0.82 agar teks / rumus tidak buram
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
           const kbSize = Math.round((compressedDataUrl.length * 3 / 4) / 1024);
           setStagingActiveImage(compressedDataUrl);
-          showToast(`Foto berhasil dipasang & dioptimasi (${kbSize} KB - Siap disimpan)!`, "info");
+          showToast(`Foto resolusi tinggi dipasang (${w}x${h}px, ${kbSize} KB - Tajam & Jelas)!`, "info");
         };
         img.onerror = function() {
-          showToast("Format gambar tidak didukung atau rusak.", "error");
+          showToast("Format berkas gambar tidak didukung atau rusak.", "error");
         };
         img.src = rawDataUrl;
       };

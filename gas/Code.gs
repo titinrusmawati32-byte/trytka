@@ -595,27 +595,64 @@ function proktorGetTemplateQuestions(payload) {
 }
 
 /**
- * Sanitasi URL / Base64 Gambar Soal
- * Mencegah data Base64 corrupt karena terpotong, membersihkan placeholder kosong/invalid
+ * Sanitasi & Simpan URL / Base64 Gambar Soal
+ * Menyimpan Base64 ke Google Drive secara otomatis sehingga gambar 100% resolusi asli,
+ * tajam, tidak buram, dan sel spreadsheet hanya menyimpan URL CDN Google ringan (55 karakter).
  */
-function sanitizeGambarUrl(rawUrl) {
+function sanitizeGambarUrl(rawUrl, idSoal, npsn) {
   if (!rawUrl) return "";
   const str = String(rawUrl).trim();
   if (str === "" || str === "-" || str === "0" || str.toLowerCase() === "null" || str.toLowerCase() === "none" || str.toLowerCase() === "tidak ada") {
     return "";
   }
-  // Data URL Base64 dari upload/Ctrl+V
+  // Jika sudah berupa URL online (http/https)
+  if (str.startsWith("http://") || str.startsWith("https://")) {
+    return str;
+  }
+  // Jika berupa Data URL Base64 dari upload/Ctrl+V
   if (str.startsWith("data:image/")) {
-    // Jangan simpan Base64 yang melebihi batas sel Google Sheets (50.000 karakter)
-    // agar data tidak terpotong dan tidak corrupt saat di-decode di browser siswa
-    if (str.length > 48000) return "";
-    return str;
+    try {
+      const commaIdx = str.indexOf(",");
+      if (commaIdx !== -1) {
+        const header = str.substring(0, commaIdx);
+        const base64Data = str.substring(commaIdx + 1);
+
+        let mimeType = "image/jpeg";
+        const mimeMatch = header.match(/data:(image\/[a-zA-Z0-9.+-]+);/);
+        if (mimeMatch) mimeType = mimeMatch[1];
+
+        const ext = mimeType.includes("png") ? "png" : "jpg";
+        const cleanId = (idSoal || Utilities.getUuid().substring(0, 8)).replace(/[^a-zA-Z0-9_-]/g, "_");
+        const fileName = `SOAL_${npsn || "TKA"}_${cleanId}.${ext}`;
+
+        const bytes = Utilities.base64Decode(base64Data);
+        const blob = Utilities.newBlob(bytes, mimeType, fileName);
+
+        // Cari atau buat folder "SiSiswa_TKA_GambarSoal" di Google Drive
+        let folder;
+        const folderName = "SiSiswa_TKA_GambarSoal";
+        const folderIter = DriveApp.getFoldersByName(folderName);
+        if (folderIter.hasNext()) {
+          folder = folderIter.next();
+        } else {
+          folder = DriveApp.createFolder(folderName);
+        }
+
+        const file = folder.createFile(blob);
+        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        const fileId = file.getId();
+
+        // Gunakan Google CDN direct link yang sangat cepat & bebas CORS / cookie
+        return `https://lh3.googleusercontent.com/d/${fileId}`;
+      }
+    } catch(errDrive) {
+      Logger.log("Drive upload error, fallback to direct base64: " + errDrive);
+      // Fallback: Jika DriveApp belum diizinkan atau gagal, simpan Base64 langsung jika ukurannya muat di sel (<48000)
+      if (str.length <= 48000) return str;
+    }
   }
-  // URL Gambar eksternal (http, https, atau path lokal)
-  if (str.startsWith("http://") || str.startsWith("https://") || str.startsWith("/")) {
-    return str;
-  }
-  return "";
+  if (str.startsWith("/")) return str;
+  return str.length <= 48000 ? str : "";
 }
 
 function proktorSaveTemplateBatch(payload) {
@@ -664,7 +701,7 @@ function proktorSaveTemplateBatch(payload) {
   // 2. Siapkan baris-baris baru yang sudah diedit
   const newRows = soalList.map((item, idx) => {
     const idSoal = item.idSoal || (`${prefix}-` + Utilities.getUuid().substring(0, 8).toUpperCase());
-    const safeGambar = sanitizeGambarUrl(item.gambarUrl);
+    const safeGambar = sanitizeGambarUrl(item.gambarUrl, idSoal, npsn);
 
     return [
       idSoal,

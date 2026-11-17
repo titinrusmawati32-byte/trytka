@@ -441,6 +441,27 @@
   </div>
 
   <!-- ========================================================================= -->
+  <!-- MODAL: PERBESAR GAMBAR SOAL CBT (FULLSCREEN ZOOM MODAL) -->
+  <!-- ========================================================================= -->
+  <div id="modalZoomImage" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-3 sm:p-6 hidden" onclick="closeZoomImageModal()">
+    <div class="relative max-w-4xl w-full max-h-[94vh] flex flex-col items-center" onclick="event.stopPropagation()">
+      <div class="w-full flex justify-between items-center pb-2.5 text-white border-b border-white/20 mb-3 px-1">
+        <span class="text-xs sm:text-sm font-bold tracking-wide flex items-center gap-2">
+          <i class="fa-solid fa-image text-purple-400"></i>
+          <span>Ilustrasi / Dokumen Soal (Resolusi Penuh)</span>
+        </span>
+        <button onclick="closeZoomImageModal()" type="button" class="px-3.5 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+          <i class="fa-solid fa-xmark"></i> <span>Tutup</span>
+        </button>
+      </div>
+      <div class="overflow-auto max-h-[82vh] w-full rounded-2xl bg-white dark:bg-slate-900 p-2 sm:p-4 shadow-2xl flex items-center justify-center border border-white/10">
+        <img id="zoomImageModalSrc" src="" alt="Gambar Soal Diperbesar" class="max-h-[78vh] w-auto max-w-full object-contain mx-auto select-none rounded-xl">
+      </div>
+      <p class="text-[11px] text-slate-300 mt-2.5 text-center">Ketuk di luar gambar atau tombol Tutup untuk kembali ke lembar soal</p>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
   <!-- SCREEN 1: ONBOARDING VIEW (PERSIS SCREEN 1 PADA GAMBAR REFERENSI) -->
   <!-- "Welcome to Smart Learning" + Karakter Roket Pensil + Dock Get Start -->
   <!-- ========================================================================= -->
@@ -971,8 +992,18 @@
             <!-- Question text injected here -->
           </div>
 
+          <!-- Question Illustration / Image Container (Dapat Diperbesar Layar Penuh) -->
           <div id="questionImageContainer" class="mb-6 hidden text-center">
-            <img id="questionImage" src="" alt="Ilustrasi Soal" onerror="this.parentElement.classList.add('hidden')" class="max-h-60 rounded-2xl mx-auto border border-slate-200 dark:border-slate-700 shadow-sm object-contain">
+            <div class="inline-block max-w-full text-center">
+              <img id="questionImage" src="" alt="Ilustrasi Soal" onclick="openZoomImageModal()"
+                   onerror="this.parentElement.parentElement.classList.add('hidden')"
+                   class="max-h-96 sm:max-h-[500px] w-auto max-w-full rounded-2xl mx-auto border-2 border-purple-200 dark:border-slate-700 shadow-md object-contain cursor-zoom-in hover:opacity-95 transition bg-white dark:bg-slate-900"
+                   title="Klik gambar untuk memperbesar layar penuh">
+              <button type="button" onclick="openZoomImageModal()" class="mt-2 inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 rounded-full text-xs font-bold border border-purple-200 dark:border-purple-800 transition shadow-sm">
+                <i class="fa-solid fa-magnifying-glass-plus"></i>
+                <span>Klik gambar untuk memperbesar layar penuh</span>
+              </button>
+            </div>
           </div>
 
           <div id="optionsContainer" class="space-y-3">
@@ -2098,6 +2129,17 @@
         nextBtn.classList.remove('hidden');
         finishBtn.classList.add('hidden');
       }
+    }
+
+    function openZoomImageModal() {
+      const currentSrc = document.getElementById('questionImage').src;
+      if (!currentSrc) return;
+      document.getElementById('zoomImageModalSrc').src = currentSrc;
+      document.getElementById('modalZoomImage').classList.remove('hidden');
+    }
+
+    function closeZoomImageModal() {
+      document.getElementById('modalZoomImage').classList.add('hidden');
     }
 
     function selectOption(idSoal, pilihan) {
