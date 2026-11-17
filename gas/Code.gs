@@ -595,7 +595,7 @@ function proktorGetTemplateQuestions(payload) {
 }
 
 function proktorSaveTemplateBatch(payload) {
-  const { npsn, kategori, namaTemplate, mapel, soalList } = payload;
+  const { npsn, kategori, namaTemplate, mapel, soalList, oldTemplateName, publishToActive } = payload;
   if (!npsn || !namaTemplate || !soalList || !Array.isArray(soalList) || soalList.length === 0) {
     return { success: false, message: "Nama template dan daftar soal wajib diisi." };
   }
@@ -608,16 +608,52 @@ function proktorSaveTemplateBatch(payload) {
 
   const kat = String(kategori || "LITERASI").trim().toUpperCase();
   const prefix = kat === "NUMERASI" ? "NUM" : "LIT";
+  const cleanName = String(namaTemplate).trim();
+  const cleanOldName = oldTemplateName ? String(oldTemplateName).trim() : cleanName;
 
-  const rows = soalList.map((item, idx) => {
+  // 1. Ambil data yang sudah ada di BankSoal, lalu singkirkan baris lama yang memiliki nama template ini (replace/overwrite bersih)
+  const existingRows = sheetToObjects(sheet);
+  const remainingRows = [];
+  existingRows.forEach(r => {
+    const rName = String(r.namaTemplate).trim();
+    const rKat = String(r.kategori).trim().toUpperCase();
+    // Jika baris ini BUKAN template yang sedang disimpan/diperbarui, simpan
+    if (rName !== cleanName && rName !== cleanOldName) {
+      remainingRows.push([
+        r.idSoal,
+        rKat,
+        rName,
+        r.mapel || (rKat === "LITERASI" ? "Bahasa Indonesia" : "Matematika"),
+        r.pertanyaan || "",
+        r.gambarUrl || "",
+        r.opsiA || "",
+        r.opsiB || "",
+        r.opsiC || "",
+        r.opsiD || "",
+        String(r.kunci || "A").trim().toUpperCase(),
+        Number(r.bobot) || 1,
+        r.pembahasan || ""
+      ]);
+    }
+  });
+
+  // 2. Siapkan baris-baris baru yang sudah diedit
+  const newRows = soalList.map((item, idx) => {
     const idSoal = item.idSoal || (`${prefix}-` + Utilities.getUuid().substring(0, 8).toUpperCase());
+    
+    // Potong Base64 jika melebihi 45000 karakter agar tidak melebihi limit sel Google Sheets (50000)
+    let safeGambar = item.gambarUrl || "";
+    if (safeGambar.length > 45000) {
+      safeGambar = safeGambar.substring(0, 45000);
+    }
+
     return [
       idSoal,
       kat,
-      namaTemplate.trim(),
+      cleanName,
       item.mapel || mapel || (kat === "LITERASI" ? "Bahasa Indonesia" : "Matematika"),
       item.pertanyaan || "",
-      item.gambarUrl || "",
+      safeGambar,
       item.opsiA || "",
       item.opsiB || "",
       item.opsiC || "",
@@ -628,11 +664,55 @@ function proktorSaveTemplateBatch(payload) {
     ];
   });
 
-  sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, bankHeaders.length).setValues(rows);
+  // 3. Gabungkan remainingRows + newRows, lalu tulis bersih ke sheet
+  const allRowsToWrite = remainingRows.concat(newRows);
+  
+  // Bersihkan data lama di sheet (mulai baris 2)
+  const lastRow = sheet.getLastRow();
+  if (lastRow > 1) {
+    sheet.getRange(2, 1, lastRow - 1, bankHeaders.length).clearContent();
+  }
+
+  // Tulis seluruh data baru yang bersih
+  if (allRowsToWrite.length > 0) {
+    sheet.getRange(2, 1, allRowsToWrite.length, bankHeaders.length).setValues(allRowsToWrite);
+  }
+
+  // 4. Jika publishToActive diaktifkan, otomatis perbarui sheet Soal_{npsn} agar siswa langsung dapat soal editan
+  if (publishToActive !== false) {
+    try {
+      const soalHeaders = ["idSoal", "paket", "mapel", "pertanyaan", "gambarUrl", "opsiA", "opsiB", "opsiC", "opsiD", "kunci", "bobot", "pembahasan"];
+      const soalSheet = getOrCreateSheet(ss, "Soal_" + npsn, soalHeaders);
+      
+      const sLastRow = soalSheet.getLastRow();
+      if (sLastRow > 1) {
+        soalSheet.getRange(2, 1, sLastRow - 1, soalHeaders.length).clearContent();
+      }
+
+      const activeRows = newRows.map(r => [
+        r[0], // idSoal
+        "PAKET-A", // paket
+        r[3], // mapel
+        r[4], // pertanyaan
+        r[5], // gambarUrl
+        r[6], // opsiA
+        r[7], // opsiB
+        r[8], // opsiC
+        r[9], // opsiD
+        r[10], // kunci
+        r[11], // bobot
+        r[12]  // pembahasan
+      ]);
+
+      if (activeRows.length > 0) {
+        soalSheet.getRange(2, 1, activeRows.length, soalHeaders.length).setValues(activeRows);
+      }
+    } catch(errActive) {}
+  }
 
   return {
     success: true,
-    message: `${rows.length} butir soal berhasil disimpan ke Folder ${kat} dalam template "${namaTemplate}".`
+    message: `${newRows.length} butir soal hasil editan berhasil disimpan ke Folder ${kat} dalam template "${cleanName}"!`
   };
 }
 

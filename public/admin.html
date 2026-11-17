@@ -334,6 +334,10 @@
           </div>
         </div>
         <div class="flex items-center gap-2">
+          <label class="hidden sm:inline-flex items-center gap-1.5 cursor-pointer text-[11px] font-bold text-slate-700 dark:text-slate-300 mr-1 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800">
+            <input type="checkbox" id="stagingCheckboxPublishActive" checked class="w-3.5 h-3.5 text-emerald-600 rounded accent-emerald-600">
+            <span>Pasang ke Ujian Siswa</span>
+          </label>
           <button onclick="closeStagingEditorModal()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl transition">
             Batal
           </button>
@@ -1767,6 +1771,7 @@
       PROKTOR_STATE.stagingCurrentIndex = 0;
       PROKTOR_STATE.stagingKategori = kategori || 'LITERASI';
       PROKTOR_STATE.stagingNamaTemplate = namaTemplate || (kategori === 'NUMERASI' ? 'Paket Numerasi 01' : 'Paket Literasi 01');
+      PROKTOR_STATE.stagingOriginalTemplateName = PROKTOR_STATE.stagingNamaTemplate; // Kunci pelacak untuk replace bersih
       PROKTOR_STATE.stagingMapel = mapel || (kategori === 'NUMERASI' ? 'Matematika' : 'Bahasa Indonesia');
 
       document.getElementById('stagingTemplateName').value = PROKTOR_STATE.stagingNamaTemplate;
@@ -1966,16 +1971,52 @@
       showToast("Butir soal berhasil dihapus.", "info");
     }
 
+    // KOMPRESI GAMBAR OTOMATIS (MAX 800PX JPEG) AGAR MUAT AMAN DI CELL GOOGLE SPREADSHEET
+    function compressAndSetImage(fileOrBlob) {
+      if (!fileOrBlob) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const rawDataUrl = evt.target.result;
+        const img = new Image();
+        img.onload = function() {
+          let w = img.width;
+          let h = img.height;
+          const maxDim = 800;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+
+          // Export as JPEG quality 0.75 (ukurannya aman ~20KB - 35KB, muat di sel Spreadsheet)
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.75);
+          setStagingActiveImage(compressedDataUrl);
+          showToast("Foto berhasil dipasang & dioptimasi!", "info");
+        };
+        img.onerror = function() {
+          setStagingActiveImage(rawDataUrl);
+        };
+        img.src = rawDataUrl;
+      };
+      reader.readAsDataURL(fileOrBlob);
+    }
+
     function handleStagingImageUploaded(e) {
       const file = e.target.files[0];
       if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        setStagingActiveImage(evt.target.result);
-        showToast("Gambar soal berhasil diunggah!", "info");
-      };
-      reader.readAsDataURL(file);
+      compressAndSetImage(file);
       e.target.value = '';
     }
 
@@ -1992,12 +2033,7 @@
           const blob = items[i].getAsFile();
           if (blob) {
             e.preventDefault();
-            const reader = new FileReader();
-            reader.onload = function(evt) {
-              setStagingActiveImage(evt.target.result);
-              showToast("Gambar berhasil ditempel dari Clipboard (Ctrl + V)!", "info");
-            };
-            reader.readAsDataURL(blob);
+            compressAndSetImage(blob);
             break;
           }
         }
@@ -2045,6 +2081,7 @@
       const namaTemplate = document.getElementById('stagingTemplateName').value.trim() || 'Paket Soal Terverifikasi';
       const kategori = document.getElementById('stagingFolderKategori').value;
       const mapel = document.getElementById('stagingMapel').value.trim() || (kategori === 'NUMERASI' ? 'Matematika' : 'Bahasa Indonesia');
+      const publishToActive = document.getElementById('stagingCheckboxPublishActive') ? document.getElementById('stagingCheckboxPublishActive').checked : true;
 
       if (!PROKTOR_STATE.stagingSoalList || PROKTOR_STATE.stagingSoalList.length === 0) {
         showToast("Tidak ada butir soal untuk disimpan.", "error");
@@ -2060,14 +2097,20 @@
           npsn: PROKTOR_STATE.proktor.npsn,
           kategori: kategori,
           namaTemplate: namaTemplate,
+          oldTemplateName: PROKTOR_STATE.stagingOriginalTemplateName || namaTemplate,
           mapel: mapel,
-          soalList: PROKTOR_STATE.stagingSoalList
+          soalList: PROKTOR_STATE.stagingSoalList,
+          publishToActive: publishToActive
         });
         const data = await res.json();
         if (data.success) {
           showToast(data.message || `Berhasil menyimpan ${PROKTOR_STATE.stagingSoalList.length} soal ke Folder ${kategori}!`, "info");
+          PROKTOR_STATE.stagingOriginalTemplateName = namaTemplate;
           closeStagingEditorModal();
-          loadBankTemplates();
+          await Promise.all([
+            loadBankTemplates(),
+            loadActiveExamInfo()
+          ]);
         } else {
           showToast(data.message || "Gagal menyimpan ke Bank Soal.", "error");
         }
