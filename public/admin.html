@@ -338,8 +338,9 @@
             <input type="checkbox" id="stagingCheckboxPublishActive" checked class="w-3.5 h-3.5 text-emerald-600 rounded accent-emerald-600">
             <span>Pasang ke Ujian Siswa</span>
           </label>
-          <button onclick="closeStagingEditorModal()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl transition">
-            Batal
+          <button onclick="closeStagingEditorModal()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl transition flex items-center gap-1.5" title="Kembali ke Beranda / Dashboard">
+            <i class="fa-solid fa-house"></i>
+            <span>Kembali ke Beranda</span>
           </button>
           <button onclick="executeSaveStagingToBank()" id="btnSaveStagingToBank" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-emerald-600/30 transition flex items-center gap-1.5">
             <i class="fa-solid fa-floppy-disk"></i>
@@ -508,12 +509,15 @@
           </div>
 
           <!-- Bottom Prev & Next Navigation -->
-          <div class="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
+          <div class="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800 gap-2">
             <button onclick="navigateStagingQuestion(-1)" id="btnStagingPrev" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl flex items-center gap-1.5 transition">
-              <i class="fa-solid fa-chevron-left"></i> <span>Soal Sebelumnya</span>
+              <i class="fa-solid fa-chevron-left"></i> <span>Sebelumnya</span>
+            </button>
+            <button onclick="closeStagingEditorModal()" type="button" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl flex items-center gap-1.5 transition" title="Kembali ke Beranda">
+              <i class="fa-solid fa-house"></i> <span class="hidden sm:inline">Kembali ke Beranda</span>
             </button>
             <button onclick="navigateStagingQuestion(1)" id="btnStagingNext" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-xl shadow-md shadow-brand-600/30 flex items-center gap-1.5 transition">
-              <span>Soal Berikutnya</span> <i class="fa-solid fa-chevron-right"></i>
+              <span>Berikutnya</span> <i class="fa-solid fa-chevron-right"></i>
             </button>
           </div>
 
@@ -1911,6 +1915,13 @@
 
       const checkedRadio = document.querySelector('input[name="stagingRadioKunci"]:checked');
       if (checkedRadio) q.kunci = checkedRadio.value;
+
+      // Sinkronkan gambar bila ada di container preview
+      const previewImg = document.getElementById('stagingImgPreview');
+      const previewContainer = document.getElementById('stagingImgPreviewContainer');
+      if (previewContainer && !previewContainer.classList.contains('hidden') && previewImg && previewImg.src && (previewImg.src.startsWith('data:image/') || previewImg.src.startsWith('http'))) {
+        q.gambarUrl = previewImg.src;
+      }
     }
 
     function onStagingFieldChange() {
@@ -1971,7 +1982,7 @@
       showToast("Butir soal berhasil dihapus.", "info");
     }
 
-    // KOMPRESI GAMBAR OTOMATIS (MAX 800PX JPEG) AGAR MUAT AMAN DI CELL GOOGLE SPREADSHEET
+    // KOMPRESI GAMBAR OTOMATIS (MAX 30KB BASE64) AGAR PASTI MUAT & TIDAK RUSAK DI GOOGLE SPREADSHEET
     function compressAndSetImage(fileOrBlob) {
       if (!fileOrBlob) return;
       const reader = new FileReader();
@@ -1979,9 +1990,9 @@
         const rawDataUrl = evt.target.result;
         const img = new Image();
         img.onload = function() {
+          let maxDim = 600;
           let w = img.width;
           let h = img.height;
-          const maxDim = 800;
           if (w > maxDim || h > maxDim) {
             if (w > h) {
               h = Math.round((h * maxDim) / w);
@@ -1993,20 +2004,33 @@
           }
 
           const canvas = document.createElement('canvas');
-          canvas.width = w;
-          canvas.height = h;
           const ctx = canvas.getContext('2d');
-          ctx.fillStyle = '#FFFFFF';
-          ctx.fillRect(0, 0, w, h);
-          ctx.drawImage(img, 0, 0, w, h);
+          let quality = 0.72;
+          let compressedDataUrl = '';
 
-          // Export as JPEG quality 0.75 (ukurannya aman ~20KB - 35KB, muat di sel Spreadsheet)
-          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.75);
+          // Loop jaminan ukuran: data URL tidak boleh melebihi 32.000 karakter agar tidak melebihi batas sel Google Sheets (50.000)
+          for (let attempt = 0; attempt < 6; attempt++) {
+            canvas.width = w;
+            canvas.height = h;
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0, w, h);
+
+            compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+            if (compressedDataUrl.length <= 32000) {
+              break;
+            }
+            quality = Math.max(0.3, quality - 0.15);
+            w = Math.round(w * 0.8);
+            h = Math.round(h * 0.8);
+          }
+
+          const kbSize = Math.round((compressedDataUrl.length * 3 / 4) / 1024);
           setStagingActiveImage(compressedDataUrl);
-          showToast("Foto berhasil dipasang & dioptimasi!", "info");
+          showToast(`Foto berhasil dipasang & dioptimasi (${kbSize} KB - Siap disimpan)!`, "info");
         };
         img.onerror = function() {
-          setStagingActiveImage(rawDataUrl);
+          showToast("Format gambar tidak didukung atau rusak.", "error");
         };
         img.src = rawDataUrl;
       };

@@ -972,7 +972,7 @@
           </div>
 
           <div id="questionImageContainer" class="mb-6 hidden text-center">
-            <img id="questionImage" src="" alt="Ilustrasi Soal" class="max-h-60 rounded-2xl mx-auto border border-slate-200 dark:border-slate-700 shadow-sm object-contain">
+            <img id="questionImage" src="" alt="Ilustrasi Soal" onerror="this.parentElement.classList.add('hidden')" class="max-h-60 rounded-2xl mx-auto border border-slate-200 dark:border-slate-700 shadow-sm object-contain">
           </div>
 
           <div id="optionsContainer" class="space-y-3">
@@ -2021,10 +2021,19 @@
 
       const imgContainer = document.getElementById('questionImageContainer');
       const imgEl = document.getElementById('questionImage');
-      if (q.gambarUrl && q.gambarUrl.trim() !== '') {
-        imgEl.src = q.gambarUrl;
-        imgContainer.classList.remove('hidden');
+      const rawImg = (q.gambarUrl || "").trim();
+      const isValidImg = rawImg && (rawImg.startsWith('data:image/') || rawImg.startsWith('http://') || rawImg.startsWith('https://') || rawImg.startsWith('/'));
+
+      if (isValidImg) {
+        imgEl.onerror = function() {
+          imgContainer.classList.add('hidden');
+        };
+        imgEl.onload = function() {
+          imgContainer.classList.remove('hidden');
+        };
+        imgEl.src = rawImg;
       } else {
+        imgEl.src = '';
         imgContainer.classList.add('hidden');
       }
 

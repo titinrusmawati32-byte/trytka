@@ -594,6 +594,30 @@ function proktorGetTemplateQuestions(payload) {
   };
 }
 
+/**
+ * Sanitasi URL / Base64 Gambar Soal
+ * Mencegah data Base64 corrupt karena terpotong, membersihkan placeholder kosong/invalid
+ */
+function sanitizeGambarUrl(rawUrl) {
+  if (!rawUrl) return "";
+  const str = String(rawUrl).trim();
+  if (str === "" || str === "-" || str === "0" || str.toLowerCase() === "null" || str.toLowerCase() === "none" || str.toLowerCase() === "tidak ada") {
+    return "";
+  }
+  // Data URL Base64 dari upload/Ctrl+V
+  if (str.startsWith("data:image/")) {
+    // Jangan simpan Base64 yang melebihi batas sel Google Sheets (50.000 karakter)
+    // agar data tidak terpotong dan tidak corrupt saat di-decode di browser siswa
+    if (str.length > 48000) return "";
+    return str;
+  }
+  // URL Gambar eksternal (http, https, atau path lokal)
+  if (str.startsWith("http://") || str.startsWith("https://") || str.startsWith("/")) {
+    return str;
+  }
+  return "";
+}
+
 function proktorSaveTemplateBatch(payload) {
   const { npsn, kategori, namaTemplate, mapel, soalList, oldTemplateName, publishToActive } = payload;
   if (!npsn || !namaTemplate || !soalList || !Array.isArray(soalList) || soalList.length === 0) {
@@ -625,7 +649,7 @@ function proktorSaveTemplateBatch(payload) {
         rName,
         r.mapel || (rKat === "LITERASI" ? "Bahasa Indonesia" : "Matematika"),
         r.pertanyaan || "",
-        r.gambarUrl || "",
+        sanitizeGambarUrl(r.gambarUrl),
         r.opsiA || "",
         r.opsiB || "",
         r.opsiC || "",
@@ -640,12 +664,7 @@ function proktorSaveTemplateBatch(payload) {
   // 2. Siapkan baris-baris baru yang sudah diedit
   const newRows = soalList.map((item, idx) => {
     const idSoal = item.idSoal || (`${prefix}-` + Utilities.getUuid().substring(0, 8).toUpperCase());
-    
-    // Potong Base64 jika melebihi 45000 karakter agar tidak melebihi limit sel Google Sheets (50000)
-    let safeGambar = item.gambarUrl || "";
-    if (safeGambar.length > 45000) {
-      safeGambar = safeGambar.substring(0, 45000);
-    }
+    const safeGambar = sanitizeGambarUrl(item.gambarUrl);
 
     return [
       idSoal,
@@ -782,7 +801,7 @@ function proktorPublishTemplatesToExam(payload) {
     pName,
     q.mapel || "Literasi & Numerasi TKA SD",
     q.pertanyaan,
-    q.gambarUrl || "",
+    sanitizeGambarUrl(q.gambarUrl),
     q.opsiA,
     q.opsiB,
     q.opsiC,
@@ -1207,7 +1226,7 @@ function siswaVerifyExamToken(payload) {
       idSoal: String(s.idSoal),
       mapel: s.mapel || "Literasi & Numerasi",
       pertanyaan: s.pertanyaan,
-      gambarUrl: s.gambarUrl || "",
+      gambarUrl: sanitizeGambarUrl(s.gambarUrl),
       opsiA: s.opsiA,
       opsiB: s.opsiB,
       opsiC: s.opsiC,
@@ -1387,7 +1406,7 @@ function siswaLoginAndGetSoal(payload) {
       idSoal: String(s.idSoal),
       mapel: s.mapel || "Literasi & Numerasi",
       pertanyaan: s.pertanyaan,
-      gambarUrl: s.gambarUrl || "",
+      gambarUrl: sanitizeGambarUrl(s.gambarUrl),
       opsiA: s.opsiA,
       opsiB: s.opsiB,
       opsiC: s.opsiC,
@@ -1614,7 +1633,7 @@ function siswaGetPembahasan(payload) {
       idSoal: idSoal,
       mapel: s.mapel || "Literasi & Numerasi",
       pertanyaan: s.pertanyaan,
-      gambarUrl: s.gambarUrl || "",
+      gambarUrl: sanitizeGambarUrl(s.gambarUrl),
       opsiA: s.opsiA,
       opsiB: s.opsiB,
       opsiC: s.opsiC,
