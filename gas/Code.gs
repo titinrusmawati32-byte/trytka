@@ -876,7 +876,19 @@ function getSchoolExamSettings(npsn) {
   const raw = props.getProperty("EXAM_SETTINGS_" + npsn);
   if (raw) {
     try {
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      return Object.assign({
+        isExamLocked: false,
+        activeToken: "TKA26",
+        allowedSchools: ["ALL"],
+        durasiMenit: 60,
+        tanggalUjian: "",
+        jamBuka: "07:30",
+        jamTutup: "12:00",
+        acakSoal: true,
+        acakOpsi: true,
+        packages: []
+      }, parsed);
     } catch(e) {}
   }
 
@@ -884,6 +896,13 @@ function getSchoolExamSettings(npsn) {
   return {
     isExamLocked: false,
     activeToken: "TKA26",
+    allowedSchools: ["ALL"],
+    durasiMenit: 60,
+    tanggalUjian: "",
+    jamBuka: "07:30",
+    jamTutup: "12:00",
+    acakSoal: true,
+    acakOpsi: true,
     packages: [
       {
         idPaket: "LIT",
@@ -932,12 +951,48 @@ function proktorGetExamSettings(payload) {
 }
 
 function proktorSetExamSettings(payload) {
-  const { npsn, settings } = payload;
+  const { npsn, settings, publishQuestions, targetPaket } = payload;
   if (!npsn || !settings) return { success: false, message: "Parameter tidak lengkap." };
+  
+  // Simpan pengaturan sesi ke script properties
   setSchoolExamSettings(npsn, settings);
+
+  // Jika menyertakan publishQuestions, langsung perbarui sheet Soal_{npsn}
+  if (publishQuestions && Array.isArray(publishQuestions) && publishQuestions.length > 0) {
+    const ss = getSpreadsheet();
+    const headers = ["idSoal", "paket", "mapel", "pertanyaan", "gambarUrl", "opsiA", "opsiB", "opsiC", "opsiD", "kunci", "bobot", "pembahasan"];
+    const sheet = getOrCreateSheet(ss, "Soal_" + npsn, headers);
+    
+    // Bersihkan sheet soal aktif sebelumnya
+    const lastRow = sheet.getLastRow();
+    if (lastRow > 1) {
+      sheet.getRange(2, 1, lastRow - 1, headers.length).clearContent();
+    }
+
+    const pkgName = targetPaket || "PAKET-A";
+    const rows = publishQuestions.map((q, idx) => [
+      String(q.idSoal || ("SOAL-" + (idx + 1))),
+      pkgName,
+      q.mapel || "Literasi & Numerasi",
+      q.pertanyaan || "",
+      q.gambarUrl || "",
+      q.opsiA || "",
+      q.opsiB || "",
+      q.opsiC || "",
+      q.opsiD || "",
+      String(q.kunci || "A").trim().toUpperCase(),
+      Number(q.bobot) || 1,
+      q.pembahasan || ""
+    ]);
+
+    if (rows.length > 0) {
+      sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
+    }
+  }
+
   return {
     success: true,
-    message: "Pengaturan akses ujian & token berhasil diperbarui.",
+    message: "Pengaturan sesi ujian, akses sekolah & sistem acak berhasil disimpan!",
     data: settings
   };
 }
@@ -948,7 +1003,20 @@ function siswaGetExamPackages(payload) {
 
   const ss = getSpreadsheet();
   const settings = getSchoolExamSettings(npsn);
+
+  // Validasi Whitelist Sekolah
+  if (settings.allowedSchools && Array.isArray(settings.allowedSchools) && settings.allowedSchools.length > 0) {
+    if (!settings.allowedSchools.includes("ALL") && !settings.allowedSchools.includes(String(npsn))) {
+      return {
+        success: false,
+        isSchoolBlocked: true,
+        message: "Sekolah Anda (" + npsn + ") belum dijadwalkan pada sesi ujian ini oleh Admin/Proktor."
+      };
+    }
+  }
+
   const soalSheet = ss.getSheetByName("Soal_" + npsn);
+  const durasiMenit = settings.durasiMenit || 60;
   
   let packages = [];
   if (soalSheet) {
@@ -961,7 +1029,7 @@ function siswaGetExamPackages(payload) {
         namaPaket: `Paket ${pName} (${allSoal.length} Soal)`,
         mapel: mapelName,
         jumlahSoal: allSoal.length,
-        durasiMenit: 60,
+        durasiMenit: durasiMenit,
         isLocked: !!settings.isExamLocked,
         keterangan: "Paket Ujian CBT Aktif dari Proktor Sekolah"
       });
@@ -975,7 +1043,7 @@ function siswaGetExamPackages(payload) {
       namaPaket: p.namaPaket,
       mapel: p.mapel,
       jumlahSoal: p.jumlahSoal,
-      durasiMenit: p.durasiMenit,
+      durasiMenit: settings.durasiMenit || p.durasiMenit || 60,
       isLocked: settings.isExamLocked || p.isLocked,
       keterangan: p.keterangan
     }));
@@ -984,6 +1052,9 @@ function siswaGetExamPackages(payload) {
   return {
     success: true,
     isExamLocked: !!settings.isExamLocked,
+    acakSoal: settings.acakSoal !== false,
+    acakOpsi: settings.acakOpsi !== false,
+    durasiMenit: durasiMenit,
     packages: packages
   };
 }
@@ -996,7 +1067,17 @@ function siswaVerifyExamToken(payload) {
 
   const settings = getSchoolExamSettings(npsn);
 
-  // 1. Cek apakah seluruh ujian sedang dikunci admin
+  // 1. Cek Whitelist Sekolah
+  if (settings.allowedSchools && Array.isArray(settings.allowedSchools) && settings.allowedSchools.length > 0) {
+    if (!settings.allowedSchools.includes("ALL") && !settings.allowedSchools.includes(String(npsn))) {
+      return {
+        success: false,
+        message: "Akses Ditolak: Sekolah Anda (" + npsn + ") belum dijadwalkan pada sesi ujian ini."
+      };
+    }
+  }
+
+  // 2. Cek apakah seluruh ujian sedang dikunci admin
   if (settings.isExamLocked) {
     return {
       success: false,
@@ -1005,7 +1086,7 @@ function siswaVerifyExamToken(payload) {
   }
 
   // Cek apakah paket ini secara spesifik dikunci
-  const targetPkg = settings.packages.find(p => p.idPaket === idPaket);
+  const targetPkg = (settings.packages || []).find(p => p.idPaket === idPaket);
   if (targetPkg && targetPkg.isLocked) {
     return {
       success: false,
@@ -1013,7 +1094,7 @@ function siswaVerifyExamToken(payload) {
     };
   }
 
-  // 2. Cek Token Ujian dari Guru
+  // 3. Cek Token Ujian dari Guru
   const cleanInput = String(tokenInput).trim().toUpperCase();
   const validToken = String(settings.activeToken || "TKA26").trim().toUpperCase();
 
@@ -1024,7 +1105,7 @@ function siswaVerifyExamToken(payload) {
     };
   }
 
-  // 3. Ambil Soal Sesuai Paket
+  // 4. Ambil Soal Sesuai Paket
   const ss = getSpreadsheet();
   const soalSheet = ss.getSheetByName("Soal_" + npsn);
   let sanitizedSoalList = [];
@@ -1050,17 +1131,22 @@ function siswaVerifyExamToken(payload) {
       opsiA: s.opsiA,
       opsiB: s.opsiB,
       opsiC: s.opsiC,
-      opsiD: s.opsiD
+      opsiD: s.opsiD,
+      kunci: String(s.kunci || "A").trim().toUpperCase()
     }));
   }
 
   return {
     success: true,
     message: "Token ujian valid! Selamat mengerjakan.",
+    acakSoal: settings.acakSoal !== false,
+    acakOpsi: settings.acakOpsi !== false,
     paketInfo: targetPkg || {
       idPaket: idPaket,
       namaPaket: "Paket Ujian",
-      durasiMenit: 60
+      durasiMenit: settings.durasiMenit || 60,
+      acakSoal: settings.acakSoal !== false,
+      acakOpsi: settings.acakOpsi !== false
     },
     soalList: sanitizedSoalList
   };

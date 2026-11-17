@@ -1536,11 +1536,23 @@
           })
         });
         const data = await res.json();
-        if (data.success && Array.isArray(data.packages) && data.packages.length > 0) {
+        if (data.isSchoolBlocked) {
+          CBT_STATE.isSchoolBlocked = true;
+          CBT_STATE.schoolBlockMessage = data.message || "Sekolah Anda belum dijadwalkan pada sesi ujian ini.";
+          CBT_STATE.packages = [];
+        } else if (data.success && Array.isArray(data.packages) && data.packages.length > 0) {
+          CBT_STATE.isSchoolBlocked = false;
           CBT_STATE.packages = data.packages;
           CBT_STATE.isExamLocked = !!data.isExamLocked;
         }
       } catch (e) {}
+
+      if (CBT_STATE.isSchoolBlocked) {
+        renderDashboardActivity();
+        renderExamPackagesList();
+        updateDashboardStats();
+        return;
+      }
 
       // 2. Jika masih kosong, ambil langsung status aktif yang baru dirakit dari proktorGetActiveExamInfo
       if (!CBT_STATE.packages || CBT_STATE.packages.length === 0) {
@@ -1602,6 +1614,19 @@
       const container = document.getElementById('dashboardActivityList');
       if (!container) return;
       container.innerHTML = '';
+
+      if (CBT_STATE.isSchoolBlocked) {
+        container.innerHTML = `
+          <div class="bg-amber-50/80 dark:bg-slate-800 rounded-3xl p-6 text-center border border-amber-200 dark:border-slate-800 text-xs text-amber-800 dark:text-amber-300 space-y-2">
+            <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto text-xl">
+              <i class="fa-solid fa-school-circle-exclamation"></i>
+            </div>
+            <p class="font-extrabold text-sm">Akses Sesi Belum Dijadwalkan</p>
+            <p class="text-[11px] leading-relaxed max-w-sm mx-auto">${CBT_STATE.schoolBlockMessage || 'Sekolah Anda belum dimasukkan dalam daftar whitelist peserta ujian sesi ini oleh Admin.'}</p>
+          </div>
+        `;
+        return;
+      }
 
       if (!CBT_STATE.packages || CBT_STATE.packages.length === 0) {
         container.innerHTML = `
@@ -1723,6 +1748,19 @@
         if (globalAlert) globalAlert.classList.add('hidden');
       }
 
+      if (CBT_STATE.isSchoolBlocked) {
+        container.innerHTML = `
+          <div class="bg-amber-50/80 dark:bg-slate-800 rounded-3xl p-6 text-center border border-amber-200 dark:border-slate-800 text-xs text-amber-800 dark:text-amber-300 space-y-2">
+            <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto text-xl">
+              <i class="fa-solid fa-school-circle-exclamation"></i>
+            </div>
+            <p class="font-extrabold text-sm">Akses Sesi Belum Dijadwalkan</p>
+            <p class="text-[11px] leading-relaxed max-w-sm mx-auto">${CBT_STATE.schoolBlockMessage || 'Sekolah Anda belum dimasukkan dalam daftar whitelist peserta ujian sesi ini oleh Admin.'}</p>
+          </div>
+        `;
+        return;
+      }
+
       if (!CBT_STATE.packages || CBT_STATE.packages.length === 0) {
         container.innerHTML = `
           <div class="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-purple-100 dark:border-slate-800 text-center space-y-2">
@@ -1789,6 +1827,19 @@
      * SISWA MEMILIH PAKET UJIAN -> MUNCUL MODAL TOKEN DARI GURU
      */
     function selectPackageForExam(idPaket) {
+      if (CBT_STATE.isSchoolBlocked) {
+        container.innerHTML = `
+          <div class="bg-amber-50/80 dark:bg-slate-800 rounded-3xl p-6 text-center border border-amber-200 dark:border-slate-800 text-xs text-amber-800 dark:text-amber-300 space-y-2">
+            <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto text-xl">
+              <i class="fa-solid fa-school-circle-exclamation"></i>
+            </div>
+            <p class="font-extrabold text-sm">Akses Sesi Belum Dijadwalkan</p>
+            <p class="text-[11px] leading-relaxed max-w-sm mx-auto">${CBT_STATE.schoolBlockMessage || 'Sekolah Anda belum dimasukkan dalam daftar whitelist peserta ujian sesi ini oleh Admin.'}</p>
+          </div>
+        `;
+        return;
+      }
+
       if (!CBT_STATE.packages || CBT_STATE.packages.length === 0) {
         showToast("Belum ada paket ujian aktif dari Admin sekolah.", "error");
         return;
@@ -1868,7 +1919,51 @@
           closeModalTokenUjian();
           showToast("Token Ujian Valid! Selamat mengerjakan.", "info");
 
-          CBT_STATE.soalList = data.soalList;
+          let questions = [...data.soalList];
+
+          // Sistem Acak 1: Acak Urutan Soal (Anti-Contek Nomor Soal)
+          const shouldRandomSoal = data.acakSoal !== false && (data.paketInfo ? data.paketInfo.acakSoal !== false : true);
+          if (shouldRandomSoal && questions.length > 1) {
+            for (let i = questions.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [questions[i], questions[j]] = [questions[j], questions[i]];
+            }
+          }
+
+          // Sistem Acak 2: Acak Pilihan Opsi Ganda (A, B, C, D) dengan Kunci Tetap Sinkron
+          const shouldRandomOpsi = data.acakOpsi !== false && (data.paketInfo ? data.paketInfo.acakOpsi !== false : true);
+          if (shouldRandomOpsi) {
+            questions = questions.map((q, idx) => {
+              const originalKey = String(q.kunci || 'A').trim().toUpperCase();
+              const opts = [
+                { text: q.opsiA, isKey: originalKey === 'A' },
+                { text: q.opsiB, isKey: originalKey === 'B' },
+                { text: q.opsiC, isKey: originalKey === 'C' },
+                { text: q.opsiD, isKey: originalKey === 'D' }
+              ];
+              // Acak opsi
+              for (let i = opts.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [opts[i], opts[j]] = [opts[j], opts[i]];
+              }
+              const letters = ['A', 'B', 'C', 'D'];
+              let newKunci = 'A';
+              opts.forEach((o, oIdx) => {
+                if (o.isKey) newKunci = letters[oIdx];
+              });
+              return {
+                ...q,
+                nomor: idx + 1,
+                opsiA: opts[0].text,
+                opsiB: opts[1].text,
+                opsiC: opts[2].text,
+                opsiD: opts[3].text,
+                kunci: newKunci
+              };
+            });
+          }
+
+          CBT_STATE.soalList = questions;
           CBT_STATE.secondsRemaining = (data.paketInfo && data.paketInfo.durasiMenit ? data.paketInfo.durasiMenit : 60) * 60;
           startCbtExamSession();
         } else {
