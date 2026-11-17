@@ -1284,15 +1284,37 @@
 
     async function proktorApiCall(action, payload = {}) {
       const activeGasUrl = typeof getGasUrl === 'function' ? getGasUrl() : (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.gasUrl : '');
-      return fetch(PROKTOR_STATE.apiEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action,
-          gasUrl: activeGasUrl,
-          payload
-        })
-      });
+      const primaryUrl = PROKTOR_STATE.apiEndpoint || '/api/gas';
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+      try {
+        const res = await fetch(primaryUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action,
+            gasUrl: activeGasUrl,
+            payload
+          }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (res.ok) return res;
+        throw new Error(`HTTP Error ${res.status}`);
+      } catch (err) {
+        clearTimeout(timeoutId);
+        // Fallback langsung ke URL Google Apps Script jika proxy Vercel timeout atau terputus
+        if (primaryUrl !== activeGasUrl && activeGasUrl && activeGasUrl.startsWith('http')) {
+          console.warn("Proxy timeout/gagal, mencoba akses langsung ke Google Apps Script:", err);
+          return fetch(activeGasUrl, {
+            method: 'POST',
+            body: JSON.stringify({ action, payload })
+          });
+        }
+        throw err;
+      }
     }
 
     function openGasConfigModal() {

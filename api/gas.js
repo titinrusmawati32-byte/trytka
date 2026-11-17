@@ -49,6 +49,10 @@ export default async function handler(req, res) {
       }
     };
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    fetchOptions.signal = controller.signal;
+
     if (req.method === 'POST') {
       const payloadBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
       fetchOptions.body = payloadBody;
@@ -56,6 +60,7 @@ export default async function handler(req, res) {
 
     // Panggil Google Apps Script Web App
     const response = await fetch(gasUrl, fetchOptions);
+    clearTimeout(timeout);
     const contentType = response.headers.get('content-type') || '';
 
     if (contentType.includes('application/json')) {
